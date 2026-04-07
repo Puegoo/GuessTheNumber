@@ -1,0 +1,1930 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Guess the Number</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+@property --ring-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  color: #fff;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#game-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: #000;
+  overflow: hidden;
+}
+
+@media (min-width: 768px) {
+  body {
+    background: #f0f0f0;
+  }
+  #game-container {
+    width: 440px;
+    height: 620px;
+    border-radius: 20px;
+    box-shadow:
+      0 0 0 1px rgba(0,0,0,0.08),
+      0 30px 90px rgba(0,0,0,0.35),
+      0 10px 35px rgba(0,0,0,0.2);
+  }
+}
+
+/* --- Screens --- */
+.screen {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 28px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 1;
+}
+
+.screen.active {
+  opacity: 1;
+  pointer-events: all;
+  z-index: 10;
+}
+
+/* --- Shimmer effect --- */
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+.shimmer-text {
+  background: linear-gradient(
+    90deg,
+    rgba(255,255,255,0.35) 0%,
+    rgba(255,255,255,1) 35%,
+    rgba(255,255,255,1) 65%,
+    rgba(255,255,255,0.35) 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 4s ease-in-out infinite;
+}
+
+/* --- Ring spin --- */
+@keyframes ringSpin {
+  0% { --ring-angle: 0deg; }
+  100% { --ring-angle: 360deg; }
+}
+
+/* --- Pulse glow --- */
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255,255,255,0); }
+  50% { box-shadow: 0 0 20px 4px rgba(255,255,255,0.08); }
+}
+
+/* --- Float --- */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+/* --- Intro Screen --- */
+#intro-screen {
+  justify-content: flex-start;
+  padding-top: 50px;
+  padding-bottom: 60px;
+  gap: 0;
+}
+
+@media (min-width: 768px) {
+  #intro-screen {
+    padding-top: 60px;
+    padding-bottom: 50px;
+  }
+}
+
+.logo-container {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin-top: 4vh;
+}
+
+.logo-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end; /* Wyrównuje tekst "the Number" idealnie do prawej krawędzi słowa "guess" */
+}
+
+.intro-title {
+  font-size: min(100px, 24vw);
+  font-weight: 900;
+  letter-spacing: -0.05em;
+  line-height: 0.8;
+  text-transform: lowercase;
+  margin: 0;
+  padding-bottom: 0.25em;
+  margin-bottom: -0.25em;
+  padding-left: 0.05em; 
+}
+
+.logo-subtitle {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-top: 4px;
+  padding-right: 4px;
+}
+
+.logo-the {
+  font-size: min(22px, 5.5vw);
+  font-weight: 400;
+}
+
+.logo-number {
+  font-size: min(34px, 8.5vw);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.intro-controls {
+  margin-top: auto; /* Zycha cały ten blok na sam dół ekranu */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.intro-desc {
+  font-size: 14px;
+  font-weight: 400;
+  color: rgba(255,255,255,0.45);
+  line-height: 1.55;
+  max-width: 280px;
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.intro-question {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.85);
+  margin-bottom: 20px;
+  margin-top: 16px;
+}
+
+.mode-icons {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.mode-icon-btn {
+  position: relative;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: none;
+  background: #fff;
+  color: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s;
+  z-index: 1;
+  overflow: visible;
+}
+
+.mode-icon-btn:hover {
+  transform: scale(1.08);
+}
+
+.mode-icon-btn:active {
+  transform: scale(0.94);
+}
+
+.mode-icon-btn svg {
+  width: 26px;
+  height: 26px;
+}
+
+.mode-icon-btn.ring-btn {
+  background: #000;
+  color: #fff;
+  isolation: isolate;
+}
+
+.mode-icon-btn.ring-btn::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  background: conic-gradient(
+    from var(--ring-angle),
+    #ff0040, #ff8000, #ffe600, #00ff88, #00ccff, #8000ff, #ff0080, #ff0040
+  );
+  z-index: -1;
+  animation: ringSpin 3s linear infinite;
+}
+
+.mode-icon-btn.ring-btn::after {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  border-radius: 50%;
+  background: #000;
+  z-index: -1;
+}
+
+.mode-icon-btn.ring-btn:hover::before {
+  inset: -5px;
+  filter: blur(6px);
+  opacity: 0.8;
+}
+
+.mode-icon-btn.ring-btn:hover {
+  box-shadow: 0 0 24px 4px rgba(255, 0, 128, 0.2),
+              0 0 24px 4px rgba(0, 200, 255, 0.15);
+}
+
+.mode-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.3);
+  margin-top: 6px;
+  text-align: center;
+}
+
+.mode-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* --- Sound toggle (bottom-right) --- */
+.sound-toggle {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: transparent;
+  color: rgba(255,255,255,0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s;
+  z-index: 50;
+}
+
+.sound-toggle:hover {
+  color: rgba(255,255,255,0.6);
+  border-color: rgba(255,255,255,0.25);
+}
+
+.sound-toggle.muted svg:first-child { display: none; }
+.sound-toggle.muted svg:last-child { display: block; }
+.sound-toggle:not(.muted) svg:first-child { display: block; }
+.sound-toggle:not(.muted) svg:last-child { display: none; }
+
+/* --- Shared input styles --- */
+.game-input {
+  width: 100%;
+  max-width: 280px;
+  height: 56px;
+  border-radius: 56px;
+  border: 2px solid rgba(255,255,255,0.15);
+  background: transparent;
+  color: #fff;
+  font-family: inherit;
+  font-size: 18px;
+  font-weight: 500;
+  text-align: center;
+  outline: none;
+  transition: border-color 0.3s;
+  -moz-appearance: textfield;
+}
+
+.game-input::-webkit-outer-spin-button,
+.game-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.game-input:focus {
+  border-color: rgba(255,255,255,0.5);
+}
+
+.game-input::placeholder {
+  color: rgba(255,255,255,0.25);
+  font-weight: 400;
+}
+
+/* --- Pill button (reusable) --- */
+.pill-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 56px;
+  border-radius: 56px;
+  border: none;
+  background: #fff;
+  color: #000;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s;
+  overflow: visible;
+  z-index: 1;
+}
+
+.pill-btn:active {
+  transform: scale(0.96);
+}
+
+/* --- Setup Screen --- */
+.setup-title {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  margin-bottom: 8px;
+}
+
+.setup-desc {
+  font-size: 14px;
+  color: rgba(255,255,255,0.4);
+  margin-bottom: 32px;
+  text-align: center;
+  line-height: 1.5;
+}
+
+.setup-field {
+  width: 100%;
+  max-width: 280px;
+  margin-bottom: 16px;
+}
+
+.setup-field label {
+  display: block;
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.35);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 8px;
+  padding-left: 20px;
+}
+
+.link-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  max-width: 280px;
+  margin-bottom: 24px;
+}
+
+.link-display {
+  flex: 1;
+  height: 48px;
+  border-radius: 48px;
+  border: 2px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.04);
+  color: rgba(255,255,255,0.5);
+  font-family: inherit;
+  font-size: 11px;
+  text-align: center;
+  line-height: 44px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0 16px;
+  user-select: all;
+}
+
+.copy-btn {
+  height: 48px;
+  padding: 0 20px;
+  border-radius: 48px;
+  border: none;
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  white-space: nowrap;
+}
+
+.copy-btn:hover { background: rgba(255,255,255,0.18); }
+
+.copy-btn.copied {
+  background: rgba(0,255,136,0.15);
+  color: #00ff88;
+}
+
+/* --- Challenge Intro Screen --- */
+.challenge-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 14px;
+  border-radius: 32px;
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.5);
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 20px;
+}
+
+.challenge-title {
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  text-align: center;
+  margin-bottom: 6px;
+}
+
+.challenge-name {
+  font-size: 18px;
+  font-weight: 400;
+  color: rgba(255,255,255,0.5);
+  margin-bottom: 32px;
+}
+
+/* --- Game Screen --- */
+#game-screen {
+  justify-content: flex-start;
+  padding-top: 36px;
+  cursor: default;
+  user-select: none;
+}
+
+.game-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding: 0 4px;
+}
+
+.game-attempts {
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.4);
+}
+
+.game-attempts span {
+  color: #fff;
+  font-weight: 700;
+}
+
+.game-timer {
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.3);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Attempts counter --- */
+.attempts-counter {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.attempts-counter .att-num {
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.attempts-counter .att-num.bump {
+  animation: attBump 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes attBump {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.3); }
+  100% { transform: scale(1); }
+}
+
+.attempts-counter .att-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.3);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* --- Big number display (invisible input) --- */
+.big-number-area {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  min-height: 120px;
+  margin-bottom: 4px;
+}
+
+.big-number {
+  font-size: min(100px, 24vw);
+  font-weight: 900;
+  letter-spacing: -0.05em;
+  line-height: 1;
+  color: #fff;
+  transition: color 0.3s;
+  position: relative;
+  min-height: 1.1em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.big-number.placeholder {
+  color: rgba(255,255,255,0.12);
+}
+
+.big-number .cursor-blink {
+  display: inline-block;
+  width: 3px;
+  height: 0.75em;
+  background: rgba(255,255,255,0.5);
+  margin-left: 4px;
+  animation: cursorBlink 1s step-end infinite;
+  vertical-align: middle;
+}
+
+@keyframes cursorBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.hidden-input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+
+.big-number-hint {
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.2);
+  margin-top: 8px;
+  transition: opacity 0.3s;
+}
+
+/* --- Feedback area --- */
+.feedback-strip {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  margin-bottom: 8px;
+}
+
+.feedback-text {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.35s, transform 0.35s;
+}
+
+.feedback-text.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.feedback-text.high { color: #ff6b6b; }
+.feedback-text.low { color: #4dabf7; }
+.feedback-text.correct { color: #51cf66; }
+
+.feedback-sub {
+  font-size: 13px;
+  font-weight: 400;
+  color: rgba(255,255,255,0.3);
+  margin-top: 2px;
+  opacity: 0;
+  transition: opacity 0.35s 0.08s;
+  text-align: center;
+}
+
+.feedback-sub.visible { opacity: 1; }
+
+/* --- Submit row --- */
+.submit-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+.circle-btn {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: none;
+  background: #fff;
+  color: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s;
+  flex-shrink: 0;
+}
+
+.circle-btn:active { transform: scale(0.9); }
+.circle-btn:hover { transform: scale(1.06); }
+.circle-btn svg { width: 22px; height: 22px; }
+
+.circle-btn.small {
+  width: 42px;
+  height: 42px;
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.5);
+}
+
+.circle-btn.small svg { width: 18px; height: 18px; }
+
+/* --- Guess history (colored numbers) --- */
+.guess-history {
+  width: 100%;
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 8px;
+  padding: 4px 8px 20px;
+  justify-content: center;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.guess-history::-webkit-scrollbar { display: none; }
+
+.guess-chip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 52px;
+  height: 42px;
+  padding: 0 14px;
+  border-radius: 42px;
+  font-size: 17px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  opacity: 0;
+  transform: scale(0.5) translateY(10px);
+  animation: chipIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes chipIn {
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.guess-chip.high {
+  background: rgba(255, 107, 107, 0.12);
+  color: #ff6b6b;
+}
+
+.guess-chip.low {
+  background: rgba(77, 171, 247, 0.12);
+  color: #4dabf7;
+}
+
+.guess-chip.correct {
+  background: rgba(81, 207, 102, 0.15);
+  color: #51cf66;
+  animation: chipCorrect 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes chipCorrect {
+  0% { opacity: 0; transform: scale(0.3); }
+  60% { transform: scale(1.2); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+/* --- Arrow indicators on chips --- */
+.guess-chip .arrow {
+  font-size: 12px;
+  margin-left: 4px;
+  opacity: 0.6;
+}
+
+/* --- Heat flash overlay --- */
+.heat-flash {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 100;
+  border-radius: inherit;
+}
+
+.heat-flash.flash {
+  animation: heatPulse 0.6s ease-out forwards;
+}
+
+@keyframes heatPulse {
+  0% { opacity: 0.7; }
+  100% { opacity: 0; }
+}
+
+/* --- Earthquake --- */
+@keyframes earthquake {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  10% { transform: translate(-5px, -3px) rotate(-0.7deg); }
+  20% { transform: translate(5px, 2px) rotate(0.7deg); }
+  30% { transform: translate(-4px, 4px) rotate(-0.5deg); }
+  40% { transform: translate(4px, -4px) rotate(0.5deg); }
+  50% { transform: translate(-3px, 2px) rotate(-0.3deg); }
+  60% { transform: translate(3px, -2px) rotate(0.3deg); }
+  70% { transform: translate(-2px, 1px) rotate(-0.1deg); }
+  80% { transform: translate(1px, -1px) rotate(0.1deg); }
+}
+
+.earthquake { animation: earthquake 0.55s ease-out; }
+
+/* --- Spring bounce --- */
+@keyframes springBounce {
+  0% { transform: scale(1); }
+  20% { transform: scale(0.92); }
+  50% { transform: scale(1.05); }
+  70% { transform: scale(0.98); }
+  100% { transform: scale(1); }
+}
+
+.spring { animation: springBounce 0.5s ease-out; }
+
+/* --- Number slide in --- */
+@keyframes numSlideIn {
+  0% {
+    transform: translateY(20px);
+    filter: blur(4px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    filter: blur(0);
+    opacity: 1;
+  }
+}
+
+.num-slide-in {
+  animation: numSlideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* --- Win celebration --- */
+@keyframes celebrate {
+  0% { transform: scale(1); }
+  15% { transform: scale(1.15); }
+  30% { transform: scale(0.95); }
+  45% { transform: scale(1.08); }
+  60% { transform: scale(0.98); }
+  75% { transform: scale(1.03); }
+  100% { transform: scale(1); }
+}
+
+.celebrate { animation: celebrate 0.8s ease-out; }
+
+/* --- Particle burst --- */
+.particle-container {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 99;
+  overflow: hidden;
+  border-radius: inherit;
+}
+
+.particle {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  animation: particleFly 1s ease-out forwards;
+}
+
+@keyframes particleFly {
+  0% { opacity: 1; transform: translate(0, 0) scale(1); }
+  100% { opacity: 0; transform: translate(var(--px), var(--py)) scale(0); }
+}
+
+/* --- Result Screen --- */
+#result-screen { gap: 4px; }
+
+.result-score-wrap { margin-bottom: 8px; }
+
+.result-score {
+  font-size: min(100px, 24vw);
+  font-weight: 900;
+  letter-spacing: -0.05em;
+  line-height: 1;
+}
+
+.result-max {
+  font-size: min(28px, 7vw);
+  font-weight: 400;
+  color: rgba(255,255,255,0.25);
+  letter-spacing: -0.02em;
+}
+
+.result-stats {
+  display: flex;
+  gap: 28px;
+  margin: 12px 0 16px;
+}
+
+.result-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.result-stat-val {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.result-stat-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.3);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.result-comment {
+  font-size: 15px;
+  font-weight: 400;
+  color: rgba(255,255,255,0.4);
+  text-align: center;
+  max-width: 260px;
+  line-height: 1.5;
+  margin-bottom: 20px;
+  font-style: italic;
+}
+
+/* --- Score reveal animation --- */
+@keyframes scoreReveal {
+  0% { opacity: 0; transform: translateY(30px) scale(0.8); filter: blur(10px); }
+  100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+}
+
+.score-reveal {
+  animation: scoreReveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes staggerIn {
+  0% { opacity: 0; transform: translateY(16px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+.stagger-in {
+  opacity: 0;
+  animation: staggerIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* --- Multiplayer comparison --- */
+.vs-card {
+  width: 100%;
+  max-width: 280px;
+  border-radius: 16px;
+  background: rgba(255,255,255,0.04);
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.vs-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.3);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.vs-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+}
+
+.vs-row + .vs-row { border-top: 1px solid rgba(255,255,255,0.06); }
+
+.vs-player {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+}
+
+.vs-player-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.7);
+}
+
+.vs-player-val {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.vs-player-val.winner { color: #51cf66; }
+
+.vs-label {
+  font-size: 10px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.2);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  width: 60px;
+  text-align: center;
+}
+
+.vs-winner-banner {
+  text-align: center;
+  margin-top: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #51cf66;
+  letter-spacing: -0.01em;
+}
+
+/* --- Back button --- */
+.back-btn {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: transparent;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: border-color 0.2s, transform 0.2s;
+  z-index: 20;
+}
+
+.back-btn:hover { border-color: rgba(255,255,255,0.3); }
+.back-btn:active { transform: scale(0.9); }
+.back-btn svg { width: 18px; height: 18px; }
+
+/* --- Watermark --- */
+.watermark {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.1);
+  letter-spacing: 0.04em;
+}
+
+/* --- Utility --- */
+.hidden { display: none !important; }
+.flex-col { display: flex; flex-direction: column; align-items: center; }
+</style>
+</head>
+<body>
+
+<div id="game-container">
+  <div class="heat-flash" id="heat-flash"></div>
+  <div class="particle-container" id="particles"></div>
+
+  <!-- SOUND TOGGLE -->
+  <button class="sound-toggle" id="sound-toggle" onclick="Game.toggleSound()">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
+  </button>
+
+  <section class="screen active" id="intro-screen">
+    <div class="logo-container">
+      <div class="logo-wrapper">
+        <h1 class="intro-title shimmer-text">guess</h1>
+        <div class="logo-subtitle shimmer-text">
+          <span class="logo-the">the</span>
+          <span class="logo-number">Number</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="intro-controls">
+      <p class="intro-desc">
+        Can you find the hidden number between 1 and 100?
+        Fewer attempts = higher score. Just start typing.
+      </p>
+      <p class="intro-question">Solo or multiplayer?</p>
+      <div class="mode-icons">
+        <div class="mode-col">
+          <button class="mode-icon-btn" id="btn-solo" onclick="Game.startSolo()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </button>
+          <span class="mode-label">Solo</span>
+        </div>
+        <div class="mode-col">
+          <button class="mode-icon-btn ring-btn" id="btn-multi" onclick="Game.startMulti()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </button>
+          <span class="mode-label">Challenge</span>
+        </div>
+      </div>
+    </div>
+    <span class="watermark">1 – 100</span>
+  </section>
+
+  <!-- SETUP SCREEN -->
+  <section class="screen" id="setup-screen">
+    <button class="back-btn" onclick="Game.show('intro-screen')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    </button>
+    <h2 class="setup-title">Challenge</h2>
+    <p class="setup-desc">Enter your name, copy the link<br>and send it to a friend.</p>
+    <div class="setup-field">
+      <label>Your name</label>
+      <input type="text" class="game-input" id="host-name" placeholder="Name" maxlength="16" autocomplete="off">
+    </div>
+    <div class="link-box" id="link-box" style="visibility:hidden">
+      <span class="link-display" id="link-display"></span>
+      <button class="copy-btn" id="copy-btn" onclick="Game.copyLink()">Copy</button>
+    </div>
+    <button class="pill-btn" id="setup-play-btn" style="max-width:280px;width:100%;opacity:0.3;pointer-events:none" onclick="Game.hostPlay()">Play</button>
+  </section>
+
+  <!-- CHALLENGE INTRO SCREEN -->
+  <section class="screen" id="challenge-intro-screen">
+    <span class="challenge-badge">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+      Challenge
+    </span>
+    <h2 class="challenge-title">You've been<br>challenged!</h2>
+    <p class="challenge-name" id="challenger-name"></p>
+    <div class="setup-field">
+      <label>Your name</label>
+      <input type="text" class="game-input" id="guest-name" placeholder="Name" maxlength="16" autocomplete="off">
+    </div>
+    <button class="pill-btn" style="max-width:280px;width:100%;margin-top:16px" onclick="Game.guestPlay()">Accept Challenge</button>
+  </section>
+
+  <!-- GAME SCREEN -->
+  <section class="screen" id="game-screen">
+    <div class="game-header">
+      <div class="attempts-counter">
+        <span class="att-num" id="att-num">0</span>
+        <span class="att-label">attempts</span>
+      </div>
+      <span class="game-timer" id="game-timer">00:00</span>
+    </div>
+
+    <div class="big-number-area" id="big-number-area">
+      <div class="big-number placeholder" id="big-number">
+        <span id="big-number-text">?</span><span class="cursor-blink"></span>
+      </div>
+      <div class="big-number-hint" id="big-number-hint">type a number</div>
+    </div>
+    <input class="hidden-input" id="hidden-input" type="text" inputmode="numeric" autocomplete="off">
+
+    <div class="feedback-strip">
+      <div style="text-align:center">
+        <div class="feedback-text" id="feedback-text"></div>
+        <div class="feedback-sub" id="feedback-sub"></div>
+      </div>
+    </div>
+
+    <div class="submit-row">
+      <button class="circle-btn small" id="clear-btn" onclick="Game.clearInput()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+      <button class="circle-btn" id="guess-btn" onclick="Game.guess()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      </button>
+    </div>
+
+    <div class="guess-history" id="guess-history"></div>
+  </section>
+
+  <!-- RESULT SCREEN -->
+  <section class="screen" id="result-screen">
+    <div class="result-score-wrap flex-col">
+      <span class="result-score score-reveal" id="result-score">0</span>
+      <span class="result-max">/ 1000</span>
+    </div>
+    <div class="result-stats stagger-in" style="animation-delay:0.3s">
+      <div class="result-stat">
+        <span class="result-stat-val" id="result-attempts">-</span>
+        <span class="result-stat-label">Attempts</span>
+      </div>
+      <div class="result-stat">
+        <span class="result-stat-val" id="result-time">-</span>
+        <span class="result-stat-label">Time</span>
+      </div>
+      <div class="result-stat">
+        <span class="result-stat-val" id="result-number">-</span>
+        <span class="result-stat-label">Number</span>
+      </div>
+    </div>
+    <p class="result-comment stagger-in" style="animation-delay:0.5s" id="result-comment"></p>
+
+    <div class="vs-card hidden" id="vs-card">
+      <div class="vs-title">Challenge Result</div>
+      <div class="vs-row">
+        <div class="vs-player">
+          <span class="vs-player-name" id="vs-p1-name">-</span>
+          <span class="vs-player-val" id="vs-p1-score">0</span>
+        </div>
+        <span class="vs-label">Score</span>
+        <div class="vs-player">
+          <span class="vs-player-name" id="vs-p2-name">-</span>
+          <span class="vs-player-val" id="vs-p2-score">0</span>
+        </div>
+      </div>
+      <div class="vs-row">
+        <div class="vs-player"><span class="vs-player-val" id="vs-p1-att">-</span></div>
+        <span class="vs-label">Attempts</span>
+        <div class="vs-player"><span class="vs-player-val" id="vs-p2-att">-</span></div>
+      </div>
+      <div class="vs-winner-banner" id="vs-winner"></div>
+    </div>
+
+    <button class="pill-btn stagger-in" style="max-width:260px;width:100%;animation-delay:0.65s" onclick="Game.playAgain()">Play Again</button>
+  </section>
+</div>
+
+<script>
+const Game = (() => {
+  // ===== AUDIO ENGINE (Web Audio API) =====
+  const Audio = (() => {
+    let ctx = null;
+    let muted = false;
+
+    function ensureCtx() {
+      if (!ctx) {
+        ctx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (ctx.state === 'suspended') {
+        ctx.resume();
+      }
+      return ctx;
+    }
+
+    // Init audio on first user interaction
+    function warmUp() {
+      ensureCtx();
+      document.removeEventListener('click', warmUp);
+      document.removeEventListener('keydown', warmUp);
+    }
+    document.addEventListener('click', warmUp);
+    document.addEventListener('keydown', warmUp);
+
+    function play(type) {
+      if (muted) return;
+      const c = ensureCtx(); // Wymusza inicjalizację audio zamiast się poddawać
+      try {
+        const now = c.currentTime;
+        switch (type) {
+          case 'tick': {
+            const o = c.createOscillator();
+            const g = c.createGain();
+            o.type = 'sine';
+            o.frequency.setValueAtTime(880, now);
+            g.gain.setValueAtTime(0.08, now);
+            g.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+            o.connect(g).connect(c.destination);
+            o.start(now); o.stop(now + 0.08);
+            break;
+          }
+          case 'type': {
+            const o = c.createOscillator();
+            const g = c.createGain();
+            o.type = 'sine';
+            o.frequency.setValueAtTime(600 + Math.random() * 200, now);
+            g.gain.setValueAtTime(0.04, now);
+            g.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+            o.connect(g).connect(c.destination);
+            o.start(now); o.stop(now + 0.06);
+            break;
+          }
+          case 'delete': {
+            const o = c.createOscillator();
+            const g = c.createGain();
+            o.type = 'sine';
+            o.frequency.setValueAtTime(300, now);
+            g.gain.setValueAtTime(0.04, now);
+            g.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+            o.connect(g).connect(c.destination);
+            o.start(now); o.stop(now + 0.07);
+            break;
+          }
+          case 'submit': {
+            const o = c.createOscillator();
+            const g = c.createGain();
+            o.type = 'triangle';
+            o.frequency.setValueAtTime(440, now);
+            o.frequency.linearRampToValueAtTime(660, now + 0.1);
+            g.gain.setValueAtTime(0.1, now);
+            g.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+            o.connect(g).connect(c.destination);
+            o.start(now); o.stop(now + 0.2);
+            break;
+          }
+          case 'high': {
+            const o = c.createOscillator();
+            const g = c.createGain();
+            o.type = 'sawtooth';
+            o.frequency.setValueAtTime(520, now);
+            o.frequency.linearRampToValueAtTime(320, now + 0.25);
+            g.gain.setValueAtTime(0.06, now);
+            g.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+            o.connect(g).connect(c.destination);
+            o.start(now); o.stop(now + 0.3);
+            break;
+          }
+          case 'low': {
+            const o = c.createOscillator();
+            const g = c.createGain();
+            o.type = 'sawtooth';
+            o.frequency.setValueAtTime(220, now);
+            o.frequency.linearRampToValueAtTime(420, now + 0.25);
+            g.gain.setValueAtTime(0.06, now);
+            g.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+            o.connect(g).connect(c.destination);
+            o.start(now); o.stop(now + 0.3);
+            break;
+          }
+          case 'win': {
+            [0, 0.12, 0.24, 0.36, 0.48].forEach((d, i) => {
+              const o = c.createOscillator();
+              const g = c.createGain();
+              o.type = 'sine';
+              const freqs = [523.25, 659.25, 783.99, 1046.5, 1318.5];
+              o.frequency.setValueAtTime(freqs[i], now + d);
+              g.gain.setValueAtTime(0.12, now + d);
+              g.gain.exponentialRampToValueAtTime(0.001, now + d + 0.3);
+              o.connect(g).connect(c.destination);
+              o.start(now + d); o.stop(now + d + 0.35);
+            });
+            break;
+          }
+          case 'lose': {
+            [0, 0.15, 0.3].forEach((d, i) => {
+              const o = c.createOscillator();
+              const g = c.createGain();
+              o.type = 'sine';
+              const freqs = [440, 370, 311];
+              o.frequency.setValueAtTime(freqs[i], now + d);
+              g.gain.setValueAtTime(0.1, now + d);
+              g.gain.exponentialRampToValueAtTime(0.001, now + d + 0.35);
+              o.connect(g).connect(c.destination);
+              o.start(now + d); o.stop(now + d + 0.4);
+            });
+            break;
+          }
+          case 'whoosh': {
+            const bufSize = c.sampleRate * 0.15;
+            const buf = c.createBuffer(1, bufSize, c.sampleRate);
+            const data = buf.getChannelData(0);
+            for (let i = 0; i < bufSize; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / bufSize);
+            const src = c.createBufferSource();
+            src.buffer = buf;
+            const g = c.createGain();
+            const f = c.createBiquadFilter();
+            f.type = 'bandpass';
+            f.frequency.setValueAtTime(2000, now);
+            f.frequency.linearRampToValueAtTime(500, now + 0.15);
+            f.Q.value = 2;
+            g.gain.setValueAtTime(0.08, now);
+            g.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+            src.connect(f).connect(g).connect(c.destination);
+            src.start(now); src.stop(now + 0.15);
+            break;
+          }
+          case 'click': {
+            const o = c.createOscillator();
+            const g = c.createGain();
+            o.type = 'sine';
+            o.frequency.setValueAtTime(1200, now);
+            g.gain.setValueAtTime(0.06, now);
+            g.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+            o.connect(g).connect(c.destination);
+            o.start(now); o.stop(now + 0.04);
+            break;
+          }
+        }
+      } catch(e) {}
+    }
+
+    function toggle() {
+      muted = !muted;
+      return muted;
+    }
+
+    function isMuted() { return muted; }
+
+    return { play, toggle, isMuted };
+  })();
+
+  // ===== STATE =====
+  const state = {
+    mode: 'solo',
+    matchId: null,
+    target: 0,
+    attempt: 0,
+    maxAttempts: Infinity,
+    guesses: [],
+    startTime: 0,
+    elapsed: 0,
+    timerInterval: null,
+    playerName: '',
+    opponentData: null,
+    won: false,
+    typedValue: '',
+    gameOver: false
+  };
+
+  const $ = id => document.getElementById(id);
+
+  // ===== SCREEN MANAGEMENT =====
+  function show(id) {
+    Audio.play('whoosh');
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    $(id).classList.add('active');
+    if (id === 'game-screen') {
+      $('hidden-input').focus();
+    }
+  }
+
+  // ===== UTILITY =====
+  function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+
+  function genId(len = 6) {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let id = '';
+    for (let i = 0; i < len; i++) id += chars[rand(0, chars.length - 1)];
+    return id;
+  }
+
+  function formatTime(ms) {
+    const s = Math.floor(ms / 1000);
+    return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+  }
+
+  // ===== PARTICLES =====
+  function burstParticles(x, y, count, colors) {
+    const container = $('particles');
+    for (let i = 0; i < count; i++) {
+      const p = document.createElement('div');
+      p.className = 'particle';
+      const angle = (Math.PI * 2 / count) * i + Math.random() * 0.5;
+      const dist = 60 + Math.random() * 120;
+      p.style.left = x + 'px';
+      p.style.top = y + 'px';
+      p.style.setProperty('--px', Math.cos(angle) * dist + 'px');
+      p.style.setProperty('--py', Math.sin(angle) * dist + 'px');
+      p.style.background = colors[Math.floor(Math.random() * colors.length)];
+      p.style.width = (4 + Math.random() * 5) + 'px';
+      p.style.height = p.style.width;
+      container.appendChild(p);
+      setTimeout(() => p.remove(), 1000);
+    }
+  }
+
+  // ===== INIT =====
+  function init() {
+    const params = new URLSearchParams(window.location.search);
+    const matchId = params.get('match');
+
+    if (matchId) {
+      const data = localStorage.getItem('match_' + matchId);
+      if (data) {
+        state.mode = 'guest';
+        state.matchId = matchId;
+        state.opponentData = JSON.parse(data);
+        $('challenger-name').textContent = `${state.opponentData.name} challenges you`;
+        show('challenge-intro-screen');
+        return;
+      }
+    }
+
+    show('intro-screen');
+
+    // Global keyboard listener for game screen
+    document.addEventListener('keydown', handleKeyDown);
+
+    // Keep hidden input focused when game screen is active
+    $('game-screen').addEventListener('click', () => {
+      if (!state.gameOver) $('hidden-input').focus();
+    });
+
+    $('host-name').addEventListener('input', onHostNameInput);
+    $('host-name').addEventListener('keydown', e => { if (e.key === 'Enter') hostPlay(); });
+    $('guest-name').addEventListener('keydown', e => { if (e.key === 'Enter') guestPlay(); });
+  }
+
+  function handleKeyDown(e) {
+    const activeScreen = document.querySelector('.screen.active');
+    if (!activeScreen || activeScreen.id !== 'game-screen') return;
+    if (state.gameOver) return;
+
+    if (e.key >= '0' && e.key <= '9') {
+      e.preventDefault();
+      if (state.typedValue.length < 3) {
+        state.typedValue += e.key;
+        Audio.play('type');
+        updateBigNumber();
+      }
+    } else if (e.key === 'Backspace') {
+      e.preventDefault();
+      if (state.typedValue.length > 0) {
+        state.typedValue = state.typedValue.slice(0, -1);
+        Audio.play('delete');
+        updateBigNumber();
+      }
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      guess();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      clearInput();
+    }
+  }
+
+  function updateBigNumber() {
+    const el = $('big-number');
+    const textEl = $('big-number-text');
+    const hintEl = $('big-number-hint');
+
+    if (state.typedValue.length === 0) {
+      textEl.textContent = '?';
+      el.classList.add('placeholder');
+      hintEl.textContent = 'type a number';
+      hintEl.style.opacity = '1';
+    } else {
+      textEl.textContent = state.typedValue;
+      el.classList.remove('placeholder');
+      hintEl.textContent = 'press enter';
+      hintEl.style.opacity = '0.4';
+
+      // Animate the number change
+      el.classList.remove('num-slide-in');
+      void el.offsetWidth;
+      el.classList.add('num-slide-in');
+    }
+  }
+
+  function clearInput() {
+    state.typedValue = '';
+    Audio.play('delete');
+    updateBigNumber();
+  }
+
+  // ===== HOST NAME INPUT =====
+  function onHostNameInput() {
+    const name = $('host-name').value.trim();
+    const linkBox = $('link-box');
+    const playBtn = $('setup-play-btn');
+
+    if (name.length > 0) {
+      if (!state.matchId) state.matchId = genId();
+      const url = location.origin + location.pathname + '?match=' + state.matchId;
+      $('link-display').textContent = url;
+      linkBox.style.visibility = 'visible';
+      playBtn.style.opacity = '1';
+      playBtn.style.pointerEvents = 'all';
+    } else {
+      linkBox.style.visibility = 'hidden';
+      playBtn.style.opacity = '0.3';
+      playBtn.style.pointerEvents = 'none';
+    }
+  }
+
+  // ===== GAME START =====
+  function resetGame() {
+    state.target = rand(1, 100);
+    state.attempt = 0;
+    state.guesses = [];
+    state.won = false;
+    state.gameOver = false;
+    state.elapsed = 0;
+    state.typedValue = '';
+
+    $('att-num').textContent = '0';
+    $('game-timer').textContent = '00:00';
+    $('guess-history').innerHTML = '';
+    $('hidden-input').value = '';
+
+    updateBigNumber();
+
+    const fb = $('feedback-text');
+    fb.textContent = '';
+    fb.className = 'feedback-text';
+    $('feedback-sub').textContent = '';
+    $('feedback-sub').classList.remove('visible');
+
+    clearInterval(state.timerInterval);
+  }
+
+  function startTimer() {
+    state.startTime = Date.now();
+    state.timerInterval = setInterval(() => {
+      state.elapsed = Date.now() - state.startTime;
+      $('game-timer').textContent = formatTime(state.elapsed);
+    }, 250);
+  }
+
+  function startSolo() {
+    Audio.play('click');
+    state.mode = 'solo';
+    state.matchId = null;
+    resetGame();
+    show('game-screen');
+    startTimer();
+  }
+
+  function startMulti() {
+    Audio.play('click');
+    state.mode = 'host';
+    state.matchId = null;
+    $('host-name').value = '';
+    $('link-box').style.visibility = 'hidden';
+    $('setup-play-btn').style.opacity = '0.3';
+    $('setup-play-btn').style.pointerEvents = 'none';
+    $('copy-btn').textContent = 'Copy';
+    $('copy-btn').classList.remove('copied');
+    show('setup-screen');
+    setTimeout(() => $('host-name').focus(), 400);
+  }
+
+  function copyLink() {
+    const url = $('link-display').textContent;
+    Audio.play('click');
+    navigator.clipboard.writeText(url).then(() => {
+      $('copy-btn').textContent = 'Copied!';
+      $('copy-btn').classList.add('copied');
+      setTimeout(() => {
+        $('copy-btn').textContent = 'Copy';
+        $('copy-btn').classList.remove('copied');
+      }, 2000);
+    });
+  }
+
+  function hostPlay() {
+    state.playerName = $('host-name').value.trim();
+    if (!state.playerName) return;
+    Audio.play('click');
+    resetGame();
+    show('game-screen');
+    startTimer();
+  }
+
+  function guestPlay() {
+    state.playerName = $('guest-name').value.trim();
+    if (!state.playerName) return;
+    Audio.play('click');
+    resetGame();
+    show('game-screen');
+    startTimer();
+  }
+
+  // ===== GUESS LOGIC =====
+  function guess() {
+    const val = parseInt(state.typedValue, 10);
+
+    if (isNaN(val) || val < 1 || val > 100) {
+      const container = $('game-container');
+      container.classList.remove('earthquake');
+      void container.offsetWidth;
+      container.classList.add('earthquake');
+      setTimeout(() => container.classList.remove('earthquake'), 550);
+      Audio.play('tick');
+      return;
+    }
+
+    if (state.gameOver) return;
+
+    Audio.play('submit');
+    state.attempt++;
+    state.guesses.push(val);
+    state.typedValue = '';
+
+    // Update counter
+    const attNum = $('att-num');
+    attNum.textContent = state.attempt;
+    attNum.classList.remove('bump');
+    void attNum.offsetWidth;
+    attNum.classList.add('bump');
+
+    const diff = Math.abs(val - state.target);
+    const fb = $('feedback-text');
+    const sub = $('feedback-sub');
+
+    // Heat flash
+    flashHeat(diff);
+
+    if (val === state.target) {
+      // === WIN ===
+      state.won = true;
+      state.gameOver = true;
+      clearInterval(state.timerInterval);
+      state.elapsed = Date.now() - state.startTime;
+
+      // Add winning chip
+      addChip(val, 'correct');
+
+      fb.textContent = 'Correct!';
+      fb.className = 'feedback-text correct visible';
+      sub.textContent = 'You found it!';
+      sub.classList.add('visible');
+
+      // Update big number to show the answer
+      $('big-number-text').textContent = val;
+      $('big-number').classList.remove('placeholder');
+      $('big-number').style.color = '#51cf66';
+      $('big-number-hint').textContent = '';
+
+      // Sounds & effects
+      Audio.play('win');
+      const container = $('game-container');
+      container.classList.add('celebrate');
+      setTimeout(() => container.classList.remove('celebrate'), 800);
+
+      // Particles
+      const rect = $('big-number').getBoundingClientRect();
+      const cRect = $('game-container').getBoundingClientRect();
+      burstParticles(
+        rect.left - cRect.left + rect.width / 2,
+        rect.top - cRect.top + rect.height / 2,
+        24,
+        ['#51cf66', '#94d82d', '#ffd43b', '#4dabf7', '#cc5de8', '#ff6b6b']
+      );
+
+      setTimeout(() => {
+        $('big-number').style.color = '';
+        showResult();
+      }, 1800);
+      return;
+    }
+
+    const isHigh = val > state.target;
+
+    // Add colored chip
+    addChip(val, isHigh ? 'high' : 'low');
+
+    // Feedback
+    fb.classList.remove('visible', 'high', 'low', 'correct');
+    void fb.offsetWidth;
+    fb.textContent = isHigh ? 'Too high' : 'Too low';
+    fb.classList.add('visible', isHigh ? 'high' : 'low');
+
+    // Sound
+    Audio.play(isHigh ? 'high' : 'low');
+
+    // Distance hint
+    let hintText = '';
+    if (diff <= 3) hintText = 'Burning hot!';
+    else if (diff <= 8) hintText = 'Very warm';
+    else if (diff <= 20) hintText = 'Getting warmer';
+    else if (diff <= 40) hintText = 'Cold';
+    else hintText = 'Freezing cold';
+    sub.textContent = hintText;
+    sub.classList.add('visible');
+
+    // Spring animation on big number
+    const bigNum = $('big-number');
+    bigNum.classList.remove('spring');
+    void bigNum.offsetWidth;
+    bigNum.classList.add('spring');
+    setTimeout(() => bigNum.classList.remove('spring'), 500);
+
+    // Update display
+    updateBigNumber();
+
+    $('hidden-input').focus();
+  }
+
+  function addChip(val, type) {
+    const chip = document.createElement('div');
+    chip.className = `guess-chip ${type}`;
+
+    let arrow = '';
+    if (type === 'high') arrow = '<span class="arrow">&#9660;</span>';
+    else if (type === 'low') arrow = '<span class="arrow">&#9650;</span>';
+
+    chip.innerHTML = `${val}${arrow}`;
+    $('guess-history').appendChild(chip);
+
+    // Scroll to bottom
+    const hist = $('guess-history');
+    hist.scrollTop = hist.scrollHeight;
+  }
+
+  function flashHeat(diff) {
+    const flash = $('heat-flash');
+    let color;
+
+    if (diff <= 3) color = 'rgba(255, 0, 60, 0.4)';
+    else if (diff <= 8) color = 'rgba(255, 100, 0, 0.3)';
+    else if (diff <= 20) color = 'rgba(255, 170, 0, 0.15)';
+    else if (diff <= 40) color = 'rgba(0, 100, 255, 0.1)';
+    else color = 'rgba(0, 50, 200, 0.08)';
+
+    flash.style.background = color;
+    flash.classList.remove('flash');
+    void flash.offsetWidth;
+    flash.classList.add('flash');
+    setTimeout(() => flash.classList.remove('flash'), 600);
+  }
+
+  // ===== SCORING =====
+  // 1 attempt = 1000, degrades logarithmically. Time bonus up to 100.
+  function calcScore(attempts, timeMs) {
+    // Attempt score: 1000 for 1, ~860 for 2, ~740 for 3, ~570 for 5, ~400 for 7, ~140 for 15, ~0 for 20+
+    const attemptScore = Math.max(0, Math.round(1000 * (1 - Math.log(attempts) / Math.log(20))));
+    const timeSec = timeMs / 1000;
+    const timeBonus = Math.max(0, Math.round(100 * (1 - Math.min(timeSec, 90) / 90)));
+    return Math.min(1000, attemptScore + timeBonus);
+  }
+
+  // ===== RESULT =====
+  function showResult() {
+    const score = calcScore(state.attempt, state.elapsed);
+    const timeFmt = formatTime(state.elapsed);
+
+    $('result-score').textContent = score;
+    $('result-score').className = 'result-score score-reveal';
+    $('result-attempts').textContent = state.attempt;
+    $('result-time').textContent = timeFmt;
+    $('result-number').textContent = state.target;
+    $('result-comment').textContent = getComment(score, state.attempt);
+
+    // Reset stagger animations
+    document.querySelectorAll('#result-screen .stagger-in').forEach(el => {
+      el.style.opacity = '0';
+      el.classList.remove('stagger-in');
+      void el.offsetWidth;
+      el.classList.add('stagger-in');
+    });
+
+    const vsCard = $('vs-card');
+
+    if (state.mode === 'host') {
+      const data = { name: state.playerName, score, attempts: state.attempt, time: state.elapsed };
+      localStorage.setItem('match_' + state.matchId, JSON.stringify(data));
+      vsCard.classList.add('hidden');
+    } else if (state.mode === 'guest' && state.opponentData) {
+      const opp = state.opponentData;
+      vsCard.classList.remove('hidden');
+      $('vs-p1-name').textContent = opp.name;
+      $('vs-p1-score').textContent = opp.score;
+      $('vs-p2-name').textContent = state.playerName;
+      $('vs-p2-score').textContent = score;
+      $('vs-p1-att').textContent = opp.attempts;
+      $('vs-p2-att').textContent = state.attempt;
+
+      if (score > opp.score) {
+        $('vs-p2-score').classList.add('winner');
+        $('vs-p1-score').classList.remove('winner');
+        $('vs-winner').textContent = `${state.playerName} wins!`;
+      } else if (opp.score > score) {
+        $('vs-p1-score').classList.add('winner');
+        $('vs-p2-score').classList.remove('winner');
+        $('vs-winner').textContent = `${opp.name} wins!`;
+      } else {
+        $('vs-p1-score').classList.remove('winner');
+        $('vs-p2-score').classList.remove('winner');
+        $('vs-winner').textContent = "It's a tie!";
+      }
+
+      const matchData = { ...opp, guest: { name: state.playerName, score, attempts: state.attempt, time: state.elapsed } };
+      localStorage.setItem('match_' + state.matchId, JSON.stringify(matchData));
+    } else {
+      vsCard.classList.add('hidden');
+    }
+
+    if (state.won) {
+      Audio.play('tick');
+    }
+
+    show('result-screen');
+  }
+
+  function getComment(score, attempts) {
+    if (score >= 900) {
+      const g = ["Are you counting cards in real life too?", "Suspiciously good. We're watching you.", "Your brain is overclocked.", "That was surgical.", "Binary search energy."];
+      return g[rand(0, g.length - 1)];
+    }
+    if (score >= 700) {
+      const g = ["Not bad. Not great. Just... adequate.", "You've done this before, haven't you?", "Solid. Like a B+ student.", "Your calculator would be proud."];
+      return g[rand(0, g.length - 1)];
+    }
+    if (score >= 400) {
+      const m = ["Mediocrity is a warm blanket.", "You're the human equivalent of 'meh'.", "Participation trophy unlocked.", "Your intuition needs a firmware update."];
+      return m[rand(0, m.length - 1)];
+    }
+    if (score > 0) {
+      const b = ["Your brain works like a broken calculator.", "Did you try with your eyes closed?", "Somewhere, a math teacher is crying.", "You guessed numbers like throwing darts blindfolded."];
+      return b[rand(0, b.length - 1)];
+    }
+    const f = ["Your brain runs on dial-up.", "Even a monkey with a keyboard would do better.", "404: Skill not found.", "Maybe try counting on your fingers next time.", "That was painful to watch."];
+    return f[rand(0, f.length - 1)];
+  }
+
+  // ===== PLAY AGAIN =====
+  function playAgain() {
+    if (window.location.search) {
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+    state.mode = 'solo';
+    state.matchId = null;
+    state.opponentData = null;
+    Audio.play('click');
+    show('intro-screen');
+  }
+
+  // ===== SOUND TOGGLE =====
+  function toggleSound() {
+    const muted = Audio.toggle();
+    $('sound-toggle').classList.toggle('muted', muted);
+    if (!muted) Audio.play('click');
+  }
+
+  // ===== BOOT =====
+  document.addEventListener('DOMContentLoaded', init);
+
+  return { show, startSolo, startMulti, copyLink, hostPlay, guestPlay, guess, clearInput, playAgain, toggleSound };
+})();
+</script>
+</body>
+</html>

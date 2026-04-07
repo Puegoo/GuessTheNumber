@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "game",
+      "runtimeExecutable": "/usr/local/bin/node",
+      "runtimeArgs": ["-e", "require('http').createServer((q,r)=>{require('fs').readFile('index.html',(e,d)=>{r.writeHead(200,{'Content-Type':'text/html'});r.end(d)});}).listen(8090)"],
+      "port": 8090
+    }
+  ]
+}
