@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>Guess the Number</title>
+<script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 
@@ -113,12 +114,6 @@ body {
   50% { box-shadow: 0 0 20px 4px rgba(255,255,255,0.08); }
 }
 
-/* --- Float --- */
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
-}
-
 /* --- Intro Screen --- */
 #intro-screen {
   justify-content: flex-start;
@@ -144,7 +139,7 @@ body {
 .logo-wrapper {
   display: flex;
   flex-direction: column;
-  align-items: flex-end; /* Wyrównuje tekst "the Number" idealnie do prawej krawędzi słowa "guess" */
+  align-items: flex-end; 
 }
 
 .intro-title {
@@ -154,6 +149,7 @@ body {
   line-height: 0.8;
   text-transform: lowercase;
   margin: 0;
+  /* Zabezpieczenie przed ucinaniem przez background-clip */
   padding-bottom: 0.25em;
   margin-bottom: -0.25em;
   padding-left: 0.05em; 
@@ -179,7 +175,7 @@ body {
 }
 
 .intro-controls {
-  margin-top: auto; /* Zycha cały ten blok na sam dół ekranu */
+  margin-top: auto; 
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -350,6 +346,11 @@ body {
   border-color: rgba(255,255,255,0.5);
 }
 
+.game-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .game-input::placeholder {
   color: rgba(255,255,255,0.25);
   font-weight: 400;
@@ -380,12 +381,19 @@ body {
   transform: scale(0.96);
 }
 
+.pill-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+
 /* --- Setup Screen --- */
 .setup-title {
   font-size: 28px;
   font-weight: 700;
   letter-spacing: -0.03em;
   margin-bottom: 8px;
+  text-align: center;
 }
 
 .setup-desc {
@@ -460,6 +468,20 @@ body {
 .copy-btn.copied {
   background: rgba(0,255,136,0.15);
   color: #00ff88;
+}
+
+.host-wait {
+  margin-top: 20px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #51cf66;
+  display: none;
+  animation: pulseWait 1.5s infinite alternate;
+}
+
+@keyframes pulseWait {
+  from { opacity: 0.5; }
+  to { opacity: 1; }
 }
 
 /* --- Challenge Intro Screen --- */
@@ -990,6 +1012,10 @@ body {
   font-size: 13px;
   font-weight: 600;
   color: rgba(255,255,255,0.7);
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+  max-width: 80px;
 }
 
 .vs-player-val {
@@ -1065,7 +1091,6 @@ body {
   <div class="heat-flash" id="heat-flash"></div>
   <div class="particle-container" id="particles"></div>
 
-  <!-- SOUND TOGGLE -->
   <button class="sound-toggle" id="sound-toggle" onclick="Game.toggleSound()">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
@@ -1106,9 +1131,8 @@ body {
     <span class="watermark">1 – 100</span>
   </section>
 
-  <!-- SETUP SCREEN -->
   <section class="screen" id="setup-screen">
-    <button class="back-btn" onclick="Game.show('intro-screen')">
+    <button class="back-btn" onclick="Game.playAgain()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
     </button>
     <h2 class="setup-title">Challenge</h2>
@@ -1121,25 +1145,34 @@ body {
       <span class="link-display" id="link-display"></span>
       <button class="copy-btn" id="copy-btn" onclick="Game.copyLink()">Copy</button>
     </div>
-    <button class="pill-btn" id="setup-play-btn" style="max-width:280px;width:100%;opacity:0.3;pointer-events:none" onclick="Game.hostPlay()">Play</button>
+    <button class="pill-btn" id="setup-play-btn" style="max-width:280px;width:100%;opacity:0.3;pointer-events:none" onclick="Game.hostPlay()">Create Challenge</button>
+    <p class="host-wait" id="host-wait-msg">Waiting for opponent to connect...</p>
   </section>
 
-  <!-- CHALLENGE INTRO SCREEN -->
   <section class="screen" id="challenge-intro-screen">
     <span class="challenge-badge">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
       Challenge
     </span>
-    <h2 class="challenge-title">You've been<br>challenged!</h2>
-    <p class="challenge-name" id="challenger-name"></p>
+    <h2 class="challenge-title">Ready to<br>play?</h2>
+    <p class="challenge-name" id="challenger-name">Enter your name to join</p>
     <div class="setup-field">
       <label>Your name</label>
       <input type="text" class="game-input" id="guest-name" placeholder="Name" maxlength="16" autocomplete="off">
     </div>
-    <button class="pill-btn" style="max-width:280px;width:100%;margin-top:16px" onclick="Game.guestPlay()">Accept Challenge</button>
+    <button class="pill-btn" id="guest-play-btn" style="max-width:280px;width:100%;margin-top:16px" onclick="Game.guestPlay()">Connect</button>
   </section>
 
-  <!-- GAME SCREEN -->
+  <section class="screen" id="choose-screen">
+    <h2 class="setup-title">Hide a Number</h2>
+    <p class="setup-desc" id="choose-status">Pick a secret number for your opponent.<br>They will try to guess it.</p>
+    <div class="result-score" id="choose-timer">15</div>
+    <div class="setup-field" style="margin-top: 24px;">
+      <input type="number" class="game-input" id="secret-input" placeholder="1 - 100" min="1" max="100">
+    </div>
+    <button class="pill-btn" id="lock-btn" style="max-width:280px;width:100%" onclick="Game.lockSecret()">Lock In</button>
+  </section>
+
   <section class="screen" id="game-screen">
     <div class="game-header">
       <div class="attempts-counter">
@@ -1176,7 +1209,13 @@ body {
     <div class="guess-history" id="guess-history"></div>
   </section>
 
-  <!-- RESULT SCREEN -->
+  <section class="screen" id="wait-result-screen">
+    <div class="particle-container" id="wait-particles"></div>
+    <h2 class="setup-title" style="color: #51cf66;">You Won!</h2>
+    <p class="setup-desc" style="font-weight: 500;">Waiting for your opponent<br>to finish guessing...</p>
+    <div class="ring-btn mode-icon-btn" style="margin-top: 30px; pointer-events: none;"></div>
+  </section>
+
   <section class="screen" id="result-screen">
     <div class="result-score-wrap flex-col">
       <span class="result-score score-reveal" id="result-score">0</span>
@@ -1225,7 +1264,7 @@ body {
 
 <script>
 const Game = (() => {
-  // ===== AUDIO ENGINE (Web Audio API) =====
+  // ===== AUDIO ENGINE (Web Audio API - Optimized) =====
   const Audio = (() => {
     let ctx = null;
     let muted = false;
@@ -1240,20 +1279,28 @@ const Game = (() => {
       return ctx;
     }
  
-    // Init audio on first user interaction
     function warmUp() {
       ensureCtx();
-      document.removeEventListener('click', warmUp);
+      // Pusty dźwięk wymuszający odblokowanie zegara na iOS/Android
+      const o = ctx.createOscillator();
+      o.connect(ctx.destination);
+      o.start(0); o.stop(ctx.currentTime + 0.001);
+
+      document.removeEventListener('mousedown', warmUp);
+      document.removeEventListener('touchstart', warmUp);
       document.removeEventListener('keydown', warmUp);
     }
-    document.addEventListener('click', warmUp);
+    
+    document.addEventListener('mousedown', warmUp);
+    document.addEventListener('touchstart', warmUp, {passive: true});
     document.addEventListener('keydown', warmUp);
 
     function play(type) {
       if (muted) return;
-      const c = ensureCtx(); // Wymusza inicjalizację audio zamiast się poddawać
+      const c = ensureCtx();
       try {
-        const now = c.currentTime;
+        // Bufor 15ms by całkowicie zniwelować "ucinanie" początku dźwięku
+        const now = c.currentTime + 0.015; 
         switch (type) {
           case 'tick': {
             const o = c.createOscillator();
@@ -1402,16 +1449,26 @@ const Game = (() => {
     matchId: null,
     target: 0,
     attempt: 0,
-    maxAttempts: Infinity,
     guesses: [],
     startTime: 0,
     elapsed: 0,
     timerInterval: null,
     playerName: '',
-    opponentData: null,
     won: false,
     typedValue: '',
-    gameOver: false
+    gameOver: false,
+    
+    // Multiplayer specific
+    peer: null,
+    conn: null,
+    opponentData: null,
+    mySecret: 0,
+    oppSecret: 0,
+    iAmReady: false,
+    oppReady: false,
+    myFinalData: null,
+    oppFinalData: null,
+    choosingInterval: null
   };
 
   const $ = id => document.getElementById(id);
@@ -1429,21 +1486,13 @@ const Game = (() => {
   // ===== UTILITY =====
   function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
 
-  function genId(len = 6) {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    let id = '';
-    for (let i = 0; i < len; i++) id += chars[rand(0, chars.length - 1)];
-    return id;
-  }
-
   function formatTime(ms) {
     const s = Math.floor(ms / 1000);
     return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
   }
 
-  // ===== PARTICLES =====
-  function burstParticles(x, y, count, colors) {
-    const container = $('particles');
+  function burstParticles(x, y, count, colors, containerId = 'particles') {
+    const container = $(containerId);
     for (let i = 0; i < count; i++) {
       const p = document.createElement('div');
       p.className = 'particle';
@@ -1467,23 +1516,15 @@ const Game = (() => {
     const matchId = params.get('match');
 
     if (matchId) {
-      const data = localStorage.getItem('match_' + matchId);
-      if (data) {
-        state.mode = 'guest';
-        state.matchId = matchId;
-        state.opponentData = JSON.parse(data);
-        $('challenger-name').textContent = `${state.opponentData.name} challenges you`;
-        show('challenge-intro-screen');
-        return;
-      }
+      state.mode = 'guest';
+      state.matchId = matchId;
+      show('challenge-intro-screen');
+    } else {
+      show('intro-screen');
     }
 
-    show('intro-screen');
-
-    // Global keyboard listener for game screen
     document.addEventListener('keydown', handleKeyDown);
 
-    // Keep hidden input focused when game screen is active
     $('game-screen').addEventListener('click', () => {
       if (!state.gameOver) $('hidden-input').focus();
     });
@@ -1493,8 +1534,144 @@ const Game = (() => {
     $('guest-name').addEventListener('keydown', e => { if (e.key === 'Enter') guestPlay(); });
   }
 
+  // ===== P2P MULTIPLAYER LOGIC =====
+  function initPeer() {
+    return new Promise((resolve) => {
+      if (state.peer) return resolve(state.peer);
+      const p = new Peer();
+      p.on('open', id => {
+        state.peer = p;
+        resolve(p);
+      });
+      p.on('error', err => {
+        alert('Connection error. Try again.');
+        console.error(err);
+      });
+    });
+  }
+
+  function setupConn() {
+    state.conn.on('data', data => {
+      if (data.type === 'INIT') {
+        state.opponentData = { name: data.name };
+        state.conn.send({ type: 'INIT_ACK', name: state.playerName });
+        startChoosingPhase();
+      } else if (data.type === 'INIT_ACK') {
+        state.opponentData = { name: data.name };
+        startChoosingPhase();
+      } else if (data.type === 'READY') {
+        state.oppSecret = data.secret;
+        state.oppReady = true;
+        checkStartGame();
+      } else if (data.type === 'FINISH') {
+        state.oppFinalData = data.payload;
+        checkShowResult();
+      }
+    });
+  }
+
+  async function hostPlay() {
+    state.playerName = $('host-name').value.trim();
+    if (!state.playerName) return;
+    Audio.play('click');
+    $('setup-play-btn').textContent = 'Creating...';
+    $('host-name').disabled = true;
+
+    await initPeer();
+    const url = location.origin + location.pathname + '?match=' + state.peer.id;
+    $('link-display').textContent = url;
+    $('link-box').style.visibility = 'visible';
+    $('setup-play-btn').style.display = 'none';
+    $('host-wait-msg').style.display = 'block';
+
+    state.peer.on('connection', c => {
+      state.conn = c;
+      setupConn();
+    });
+  }
+
+  async function guestPlay() {
+    state.playerName = $('guest-name').value.trim();
+    if (!state.playerName) return;
+    Audio.play('click');
+    $('guest-play-btn').textContent = 'Connecting...';
+    $('guest-name').disabled = true;
+
+    await initPeer();
+    state.conn = state.peer.connect(state.matchId);
+    state.conn.on('open', () => {
+      setupConn();
+      state.conn.send({ type: 'INIT', name: state.playerName });
+    });
+  }
+
+  // ===== CHOOSING PHASE =====
+  function startChoosingPhase() {
+    show('choose-screen');
+    $('choose-status').innerHTML = `Playing vs <b>${state.opponentData.name}</b>`;
+    $('secret-input').value = '';
+    $('secret-input').disabled = false;
+    $('lock-btn').disabled = false;
+    $('lock-btn').textContent = 'Lock In';
+    
+    state.iAmReady = false;
+    state.oppReady = false;
+    let timeLeft = 15;
+    $('choose-timer').textContent = timeLeft;
+
+    clearInterval(state.choosingInterval);
+    state.choosingInterval = setInterval(() => {
+      timeLeft--;
+      $('choose-timer').textContent = timeLeft;
+      if (timeLeft <= 0) {
+        clearInterval(state.choosingInterval);
+        if (!state.iAmReady) autoLockSecret();
+      }
+    }, 1000);
+  }
+
+  function lockSecret() {
+    if (state.iAmReady) return;
+    let val = parseInt($('secret-input').value, 10);
+    if (isNaN(val) || val < 1 || val > 100) {
+      val = rand(1, 100);
+      $('secret-input').value = val;
+    }
+    Audio.play('click');
+    state.mySecret = val;
+    state.iAmReady = true;
+
+    $('secret-input').disabled = true;
+    $('lock-btn').disabled = true;
+    $('lock-btn').textContent = 'Waiting for opponent...';
+
+    state.conn.send({ type: 'READY', secret: state.mySecret });
+    checkStartGame();
+  }
+
+  function autoLockSecret() {
+    lockSecret();
+  }
+
+  function checkStartGame() {
+    if (state.iAmReady && state.oppReady) {
+      clearInterval(state.choosingInterval);
+      state.target = state.oppSecret; // Target is now the opponent's secret!
+      resetGameUI();
+      show('game-screen');
+      startTimer();
+    }
+  }
+
   function handleKeyDown(e) {
     const activeScreen = document.querySelector('.screen.active');
+    
+    // Choose phase quick-enter
+    if (activeScreen && activeScreen.id === 'choose-screen') {
+       if (e.key === 'Enter') lockSecret();
+       return;
+    }
+
     if (!activeScreen || activeScreen.id !== 'game-screen') return;
     if (state.gameOver) return;
 
@@ -1537,7 +1714,6 @@ const Game = (() => {
       hintEl.textContent = 'press enter';
       hintEl.style.opacity = '0.4';
 
-      // Animate the number change
       el.classList.remove('num-slide-in');
       void el.offsetWidth;
       el.classList.add('num-slide-in');
@@ -1550,35 +1726,28 @@ const Game = (() => {
     updateBigNumber();
   }
 
-  // ===== HOST NAME INPUT =====
   function onHostNameInput() {
     const name = $('host-name').value.trim();
-    const linkBox = $('link-box');
     const playBtn = $('setup-play-btn');
 
     if (name.length > 0) {
-      if (!state.matchId) state.matchId = genId();
-      const url = location.origin + location.pathname + '?match=' + state.matchId;
-      $('link-display').textContent = url;
-      linkBox.style.visibility = 'visible';
       playBtn.style.opacity = '1';
       playBtn.style.pointerEvents = 'all';
     } else {
-      linkBox.style.visibility = 'hidden';
       playBtn.style.opacity = '0.3';
       playBtn.style.pointerEvents = 'none';
     }
   }
 
-  // ===== GAME START =====
-  function resetGame() {
-    state.target = rand(1, 100);
+  // ===== GAME PLAY (CORE) =====
+  function resetGameUI() {
     state.attempt = 0;
     state.guesses = [];
     state.won = false;
     state.gameOver = false;
     state.elapsed = 0;
     state.typedValue = '';
+    state.myFinalData = null;
 
     $('att-num').textContent = '0';
     $('game-timer').textContent = '00:00';
@@ -1607,8 +1776,8 @@ const Game = (() => {
   function startSolo() {
     Audio.play('click');
     state.mode = 'solo';
-    state.matchId = null;
-    resetGame();
+    state.target = rand(1, 100);
+    resetGameUI();
     show('game-screen');
     startTimer();
   }
@@ -1616,11 +1785,14 @@ const Game = (() => {
   function startMulti() {
     Audio.play('click');
     state.mode = 'host';
-    state.matchId = null;
     $('host-name').value = '';
+    $('host-name').disabled = false;
     $('link-box').style.visibility = 'hidden';
     $('setup-play-btn').style.opacity = '0.3';
     $('setup-play-btn').style.pointerEvents = 'none';
+    $('setup-play-btn').style.display = 'flex';
+    $('setup-play-btn').textContent = 'Create Challenge';
+    $('host-wait-msg').style.display = 'none';
     $('copy-btn').textContent = 'Copy';
     $('copy-btn').classList.remove('copied');
     show('setup-screen');
@@ -1640,25 +1812,6 @@ const Game = (() => {
     });
   }
 
-  function hostPlay() {
-    state.playerName = $('host-name').value.trim();
-    if (!state.playerName) return;
-    Audio.play('click');
-    resetGame();
-    show('game-screen');
-    startTimer();
-  }
-
-  function guestPlay() {
-    state.playerName = $('guest-name').value.trim();
-    if (!state.playerName) return;
-    Audio.play('click');
-    resetGame();
-    show('game-screen');
-    startTimer();
-  }
-
-  // ===== GUESS LOGIC =====
   function guess() {
     const val = parseInt(state.typedValue, 10);
 
@@ -1679,7 +1832,6 @@ const Game = (() => {
     state.guesses.push(val);
     state.typedValue = '';
 
-    // Update counter
     const attNum = $('att-num');
     attNum.textContent = state.attempt;
     attNum.classList.remove('bump');
@@ -1690,7 +1842,6 @@ const Game = (() => {
     const fb = $('feedback-text');
     const sub = $('feedback-sub');
 
-    // Heat flash
     flashHeat(diff);
 
     if (val === state.target) {
@@ -1699,8 +1850,13 @@ const Game = (() => {
       state.gameOver = true;
       clearInterval(state.timerInterval);
       state.elapsed = Date.now() - state.startTime;
+      const score = calcScore(state.attempt, state.elapsed);
+      state.myFinalData = { score, attempts: state.attempt, time: state.elapsed };
 
-      // Add winning chip
+      if (state.mode !== 'solo' && state.conn) {
+        state.conn.send({ type: 'FINISH', payload: state.myFinalData });
+      }
+
       addChip(val, 'correct');
 
       fb.textContent = 'Correct!';
@@ -1708,19 +1864,16 @@ const Game = (() => {
       sub.textContent = 'You found it!';
       sub.classList.add('visible');
 
-      // Update big number to show the answer
       $('big-number-text').textContent = val;
       $('big-number').classList.remove('placeholder');
       $('big-number').style.color = '#51cf66';
       $('big-number-hint').textContent = '';
 
-      // Sounds & effects
       Audio.play('win');
       const container = $('game-container');
       container.classList.add('celebrate');
       setTimeout(() => container.classList.remove('celebrate'), 800);
 
-      // Particles
       const rect = $('big-number').getBoundingClientRect();
       const cRect = $('game-container').getBoundingClientRect();
       burstParticles(
@@ -1732,26 +1885,21 @@ const Game = (() => {
 
       setTimeout(() => {
         $('big-number').style.color = '';
-        showResult();
+        checkShowResult();
       }, 1800);
       return;
     }
 
     const isHigh = val > state.target;
-
-    // Add colored chip
     addChip(val, isHigh ? 'high' : 'low');
 
-    // Feedback
     fb.classList.remove('visible', 'high', 'low', 'correct');
     void fb.offsetWidth;
     fb.textContent = isHigh ? 'Too high' : 'Too low';
     fb.classList.add('visible', isHigh ? 'high' : 'low');
 
-    // Sound
     Audio.play(isHigh ? 'high' : 'low');
 
-    // Distance hint
     let hintText = '';
     if (diff <= 3) hintText = 'Burning hot!';
     else if (diff <= 8) hintText = 'Very warm';
@@ -1761,16 +1909,13 @@ const Game = (() => {
     sub.textContent = hintText;
     sub.classList.add('visible');
 
-    // Spring animation on big number
     const bigNum = $('big-number');
     bigNum.classList.remove('spring');
     void bigNum.offsetWidth;
     bigNum.classList.add('spring');
     setTimeout(() => bigNum.classList.remove('spring'), 500);
 
-    // Update display
     updateBigNumber();
-
     $('hidden-input').focus();
   }
 
@@ -1785,7 +1930,6 @@ const Game = (() => {
     chip.innerHTML = `${val}${arrow}`;
     $('guess-history').appendChild(chip);
 
-    // Scroll to bottom
     const hist = $('guess-history');
     hist.scrollTop = hist.scrollHeight;
   }
@@ -1793,7 +1937,6 @@ const Game = (() => {
   function flashHeat(diff) {
     const flash = $('heat-flash');
     let color;
-
     if (diff <= 3) color = 'rgba(255, 0, 60, 0.4)';
     else if (diff <= 8) color = 'rgba(255, 100, 0, 0.3)';
     else if (diff <= 20) color = 'rgba(255, 170, 0, 0.15)';
@@ -1807,29 +1950,40 @@ const Game = (() => {
     setTimeout(() => flash.classList.remove('flash'), 600);
   }
 
-  // ===== SCORING =====
-  // 1 attempt = 1000, degrades logarithmically. Time bonus up to 100.
   function calcScore(attempts, timeMs) {
-    // Attempt score: 1000 for 1, ~860 for 2, ~740 for 3, ~570 for 5, ~400 for 7, ~140 for 15, ~0 for 20+
     const attemptScore = Math.max(0, Math.round(1000 * (1 - Math.log(attempts) / Math.log(20))));
     const timeSec = timeMs / 1000;
     const timeBonus = Math.max(0, Math.round(100 * (1 - Math.min(timeSec, 90) / 90)));
     return Math.min(1000, attemptScore + timeBonus);
   }
 
-  // ===== RESULT =====
-  function showResult() {
-    const score = calcScore(state.attempt, state.elapsed);
-    const timeFmt = formatTime(state.elapsed);
+  // ===== RESULT SYNCING =====
+  function checkShowResult() {
+    if (!state.myFinalData) return; // Gra lokalna jeszcze trwa
 
-    $('result-score').textContent = score;
+    if (state.mode === 'solo') {
+      renderResult();
+    } else {
+      if (state.oppFinalData) {
+        renderResult();
+      } else {
+        // Czekamy aż przeciwnik też odgadnie liczbę
+        const rect = $('game-container').getBoundingClientRect();
+        burstParticles(rect.width/2, rect.height/2, 30, ['#51cf66', '#4dabf7'], 'wait-particles');
+        show('wait-result-screen');
+      }
+    }
+  }
+
+  function renderResult() {
+    const my = state.myFinalData;
+    $('result-score').textContent = my.score;
     $('result-score').className = 'result-score score-reveal';
-    $('result-attempts').textContent = state.attempt;
-    $('result-time').textContent = timeFmt;
+    $('result-attempts').textContent = my.attempts;
+    $('result-time').textContent = formatTime(my.time);
     $('result-number').textContent = state.target;
-    $('result-comment').textContent = getComment(score, state.attempt);
+    $('result-comment').textContent = getComment(my.score, my.attempts);
 
-    // Reset stagger animations
     document.querySelectorAll('#result-screen .stagger-in').forEach(el => {
       el.style.opacity = '0';
       el.classList.remove('stagger-in');
@@ -1839,44 +1993,35 @@ const Game = (() => {
 
     const vsCard = $('vs-card');
 
-    if (state.mode === 'host') {
-      const data = { name: state.playerName, score, attempts: state.attempt, time: state.elapsed };
-      localStorage.setItem('match_' + state.matchId, JSON.stringify(data));
+    if (state.mode === 'solo') {
       vsCard.classList.add('hidden');
-    } else if (state.mode === 'guest' && state.opponentData) {
-      const opp = state.opponentData;
+    } else {
       vsCard.classList.remove('hidden');
-      $('vs-p1-name').textContent = opp.name;
+      const opp = state.oppFinalData;
+      
+      $('vs-p1-name').textContent = state.opponentData.name;
       $('vs-p1-score').textContent = opp.score;
       $('vs-p2-name').textContent = state.playerName;
-      $('vs-p2-score').textContent = score;
+      $('vs-p2-score').textContent = my.score;
       $('vs-p1-att').textContent = opp.attempts;
-      $('vs-p2-att').textContent = state.attempt;
+      $('vs-p2-att').textContent = my.attempts;
 
-      if (score > opp.score) {
+      if (my.score > opp.score) {
         $('vs-p2-score').classList.add('winner');
         $('vs-p1-score').classList.remove('winner');
         $('vs-winner').textContent = `${state.playerName} wins!`;
-      } else if (opp.score > score) {
+      } else if (opp.score > my.score) {
         $('vs-p1-score').classList.add('winner');
         $('vs-p2-score').classList.remove('winner');
-        $('vs-winner').textContent = `${opp.name} wins!`;
+        $('vs-winner').textContent = `${state.opponentData.name} wins!`;
       } else {
         $('vs-p1-score').classList.remove('winner');
         $('vs-p2-score').classList.remove('winner');
         $('vs-winner').textContent = "It's a tie!";
       }
-
-      const matchData = { ...opp, guest: { name: state.playerName, score, attempts: state.attempt, time: state.elapsed } };
-      localStorage.setItem('match_' + state.matchId, JSON.stringify(matchData));
-    } else {
-      vsCard.classList.add('hidden');
     }
 
-    if (state.won) {
-      Audio.play('tick');
-    }
-
+    if (state.won) Audio.play('tick');
     show('result-screen');
   }
 
@@ -1901,29 +2046,20 @@ const Game = (() => {
     return f[rand(0, f.length - 1)];
   }
 
-  // ===== PLAY AGAIN =====
   function playAgain() {
-    if (window.location.search) {
-      window.history.replaceState({}, '', window.location.pathname);
-    }
-    state.mode = 'solo';
-    state.matchId = null;
-    state.opponentData = null;
-    Audio.play('click');
-    show('intro-screen');
+    // Twardy restart całej aplikacji, aby na nowo nawiązać sesje P2P
+    window.location.search = '';
   }
 
-  // ===== SOUND TOGGLE =====
   function toggleSound() {
     const muted = Audio.toggle();
     $('sound-toggle').classList.toggle('muted', muted);
     if (!muted) Audio.play('click');
   }
 
-  // ===== BOOT =====
   document.addEventListener('DOMContentLoaded', init);
 
-  return { show, startSolo, startMulti, copyLink, hostPlay, guestPlay, guess, clearInput, playAgain, toggleSound };
+  return { show, startSolo, startMulti, copyLink, hostPlay, guestPlay, guess, clearInput, playAgain, toggleSound, lockSecret };
 })();
 </script>
 </body>
