@@ -45,11 +45,11 @@ const Game = (() => {
 
   // ===== STATE =====
   const S = {
-    gameType: 'classic', // 'classic' or 'digits'
+    gameType: 'classic', 
     mode: 'solo', 
     target: 0, 
-    targetStr: '', // for digits mode
-    knownDigits: [null, null, null, null], // for digits mode
+    targetStr: '', 
+    knownDigits: [null, null, null, null], 
     attempt: 0, 
     startTime: 0, 
     elapsed: 0,
@@ -106,8 +106,8 @@ const Game = (() => {
     $('tab-digits').classList.toggle('active', type === 'digits');
     $('logo-mode-text').textContent = type === 'classic' ? 'Number' : 'PIN';
     $('intro-desc-text').innerHTML = type === 'classic' ? 
-        'Znajdź ukrytą liczbę od 0 do 100.<br>Mniej prób = wyższy wynik.' : 
-        'Odgadnij 4-cyfrowy kod PIN.<br>Zielone cyfry zostają na miejscu.';
+        'Find the hidden number from 0 to 100.<br>Fewer attempts = higher score.' : 
+        'Guess the 4-digit PIN.<br>Green digits stay in place.';
     SFX.play('click');
   }
 
@@ -152,24 +152,23 @@ const Game = (() => {
     $('opp-range-current').textContent = val;
     if (correct) {
       $('opp-range-current').className = 'opp-range-current correct';
-      $('opp-range-hint').textContent = 'Zgadł!';
+      $('opp-range-hint').textContent = 'Found it!';
       $('opp-range-hint').className = 'opp-range-hint correct';
     } else if (S.gameType === 'classic') {
       if (isHigh) {
         $('opp-range-current').className = 'opp-range-current high';
-        $('opp-range-hint').textContent = '↓ Za dużo';
+        $('opp-range-hint').textContent = '↓ Too high';
         $('opp-range-hint').className = 'opp-range-hint high';
         if (val < S.oppRangeHigh) { S.oppRangeHigh = val; $('opp-range-high').textContent = val; $('opp-range-high').className = 'opp-range-num high'; }
       } else {
         $('opp-range-current').className = 'opp-range-current low';
-        $('opp-range-hint').textContent = '↑ Za mało';
+        $('opp-range-hint').textContent = '↑ Too low';
         $('opp-range-hint').className = 'opp-range-hint low';
         if (val > S.oppRangeLow) { S.oppRangeLow = val; $('opp-range-low').textContent = val; $('opp-range-low').className = 'opp-range-num low'; }
       }
     } else {
-        // Digits mode feedback for opp
         $('opp-range-current').className = 'opp-range-current';
-        $('opp-range-hint').textContent = 'Próbuje...';
+        $('opp-range-hint').textContent = 'Guessing...';
         $('opp-range-hint').className = 'opp-range-hint';
     }
   }
@@ -181,26 +180,26 @@ const Game = (() => {
     tb.classList.remove('hidden');
 
     if (S.iFinished) {
-      tb.className = 'turn-badge opp-turn'; tt.textContent = 'Koniec';
-      $('classic-display').style.opacity = '0.3'; $('digits-display').style.opacity = '0.3';
+      tb.className = 'turn-badge opp-turn'; tt.textContent = 'Finished';
+      $('main-display').style.opacity = '0.3'; 
       $('submit-row').style.opacity = '0.3'; $('submit-row').style.pointerEvents = 'none';
       
       ot.className = 'opp-turn-pill ' + (S.oppFinished ? 'done' : 'their-turn');
-      otxt.textContent = S.oppFinished ? 'Koniec' : 'Zgaduje...';
+      otxt.textContent = S.oppFinished ? 'Finished' : 'Guessing...';
       return;
     }
 
     if (S.myTurn) {
-      tb.className = 'turn-badge my-turn'; tt.textContent = 'Twój ruch';
-      $('classic-display').style.opacity = '1'; $('digits-display').style.opacity = '1';
+      tb.className = 'turn-badge my-turn'; tt.textContent = 'Your turn';
+      $('main-display').style.opacity = '1';
       $('submit-row').style.opacity = '1'; $('submit-row').style.pointerEvents = 'auto';
-      ot.className = 'opp-turn-pill your-turn'; otxt.textContent = 'Czeka';
+      ot.className = 'opp-turn-pill your-turn'; otxt.textContent = 'Waiting';
     } else {
-      tb.className = 'turn-badge opp-turn'; tt.textContent = "Ruch Gracza";
-      $('classic-display').style.opacity = '0.4'; $('digits-display').style.opacity = '0.4';
+      tb.className = 'turn-badge opp-turn'; tt.textContent = "Opp's turn";
+      $('main-display').style.opacity = '0.4';
       $('submit-row').style.opacity = '0.3'; $('submit-row').style.pointerEvents = 'none';
       S.typedValue = ''; updateBigNum();
-      ot.className = 'opp-turn-pill their-turn'; otxt.textContent = 'Zgaduje...';
+      ot.className = 'opp-turn-pill their-turn'; otxt.textContent = 'Guessing...';
     }
   }
 
@@ -208,11 +207,19 @@ const Game = (() => {
   function init() {
     document.addEventListener('keydown', onKey);
     $('game-screen').addEventListener('click', ()=>{ if(!S.gameOver && (S.mode==='solo'||S.myTurn)) $('hidden-input').focus(); });
-    $('host-name').addEventListener('input', onHostInput);
-    $('host-name').addEventListener('keydown', e=>{ if(e.key==='Enter') hostPlay(); });
-    $('guest-name').addEventListener('input', onGuestInput);
-    $('guest-code').addEventListener('input', onGuestInput);
-    $('guest-code').addEventListener('keydown', e=>{ if(e.key==='Enter') guestPlay(); });
+    $('player-name').addEventListener('input', updateSetupButtons);
+    $('guest-code').addEventListener('input', updateSetupButtons);
+    
+    // Quick enter key support for form
+    $('guest-code').addEventListener('keydown', e=>{ 
+        if(e.key==='Enter' && !$('guest-play-btn').disabled) guestPlay(); 
+    });
+    $('player-name').addEventListener('keydown', e=>{ 
+        if(e.key==='Enter') {
+            if (!$('guest-play-btn').disabled) guestPlay();
+            else if (!$('setup-play-btn').disabled) hostPlay();
+        }
+    });
   }
 
   // ===== PEER =====
@@ -222,7 +229,7 @@ const Game = (() => {
       let peerId = isHost ? 'gtn-' + Math.floor(100000 + Math.random() * 900000) : null;
       const p = peerId ? new Peer(peerId) : new Peer();
       p.on('open', ()=>{ S.peer=p; resolve(p); });
-      p.on('error', e=>{ alert('Błąd połączenia. Spróbuj ponownie.'); console.error(e); });
+      p.on('error', e=>{ alert('Connection error. Try again.'); console.error(e); });
     });
   }
 
@@ -231,7 +238,7 @@ const Game = (() => {
       if (d.type==='INIT') { 
           S.oppName=d.name; 
           S.rounds=d.rounds; 
-          S.gameType=d.gameType; // Host narzuca zasady
+          S.gameType=d.gameType; // Host enforces rules
           S.conn.send({type:'INIT_ACK',name:S.playerName}); 
           startChoosing(); 
       }
@@ -246,58 +253,58 @@ const Game = (() => {
   }
 
   // ===== SETUP =====
+  function updateSetupButtons() {
+      const hasName = $('player-name').value.trim().length > 0;
+      const codeLen = $('guest-code').value.trim().length;
+      $('setup-play-btn').disabled = !hasName;
+      $('guest-play-btn').disabled = !(hasName && codeLen === 6);
+  }
+
   function setRounds(n) {
     S.rounds = n;
     document.querySelectorAll('.round-pill').forEach(b => b.classList.toggle('active', +b.dataset.rounds===n));
     SFX.play('click');
   }
 
-  function onHostInput() { $('setup-play-btn').disabled = !$('host-name').value.trim(); }
-  function onGuestInput() { 
-      $('guest-play-btn').disabled = !($('guest-name').value.trim() && $('guest-code').value.trim().length === 6); 
-  }
-
   async function hostPlay() {
-    S.playerName = $('host-name').value.trim();
+    S.playerName = $('player-name').value.trim();
     if (!S.playerName) return;
     SFX.play('click');
     S.mode = 'host';
-    $('setup-play-btn').textContent = 'Tworzenie...';
-    $('setup-play-btn').disabled = true;
-    $('host-name').disabled = true;
+    $('player-name').disabled = true;
+    $('create-join-section').classList.add('hidden');
+    $('waiting-section').classList.remove('hidden');
 
     await initPeer(true);
     S.roomCode = S.peer.id.replace('gtn-', '');
     $('room-code-display').textContent = S.roomCode;
-    $('room-code-box').classList.remove('hidden');
-    $('host-wait-msg').style.display = 'block';
-    $('setup-play-btn').style.display = 'none';
 
     S.peer.on('connection', c => { 
         S.conn = c; 
         c.on('open', () => {
             setupConn(); 
-            // Host wysyła swoje zasady (Tryb + Rundy)
             c.send({ type:'INIT', name:S.playerName, rounds:S.rounds, gameType:S.gameType });
         });
     });
   }
 
   async function guestPlay() {
-    S.playerName = $('guest-name').value.trim();
+    S.playerName = $('player-name').value.trim();
     const code = $('guest-code').value.trim();
     if (!S.playerName || code.length !== 6) return;
     SFX.play('click');
-    $('guest-play-btn').textContent = 'Łączenie...';
+    S.mode = 'guest';
+    
+    $('guest-play-btn').textContent = 'Connecting...';
     $('guest-play-btn').disabled = true;
-    $('guest-name').disabled = true;
+    $('setup-play-btn').disabled = true;
+    $('player-name').disabled = true;
     $('guest-code').disabled = true;
 
     await initPeer(false);
     S.conn = S.peer.connect('gtn-' + code);
     S.conn.on('open', () => {
       setupConn();
-      // Gość czeka na pakiet INIT od Hosta, który ustali zasady
     });
   }
 
@@ -310,7 +317,7 @@ const Game = (() => {
 
     document.body.classList.remove('multi-active');
     show('choose-screen');
-    $('choose-status').innerHTML = `Runda ${S.currentRound}/${S.rounds} vs <b>${S.oppName}</b>`;
+    $('choose-status').innerHTML = `Round ${S.currentRound}/${S.rounds} vs <b>${S.oppName}</b>`;
     
     if (S.gameType === 'digits') {
         $('secret-input').placeholder = "0000 - 9999";
@@ -319,7 +326,7 @@ const Game = (() => {
     }
     
     $('secret-input').value = ''; $('secret-input').disabled = false;
-    $('lock-btn').disabled = false; $('lock-btn').textContent = 'Zatwierdź';
+    $('lock-btn').disabled = false; $('lock-btn').textContent = 'Lock In';
 
     const deadline = Date.now() + 30000;
     clearInterval(S.choosingInterval);
@@ -354,7 +361,7 @@ const Game = (() => {
     S.iAmReady = true;
     $('secret-input').disabled = true;
     $('lock-btn').disabled = true;
-    $('lock-btn').textContent = 'Czekam...';
+    $('lock-btn').textContent = 'Waiting...';
     checkStartRound();
   }
 
@@ -382,7 +389,7 @@ const Game = (() => {
     $('opp-card-chips').innerHTML = '';
 
     const rb = $('round-badge');
-    if (S.rounds > 1) { rb.classList.remove('hidden'); rb.textContent = `Runda ${S.currentRound}/${S.rounds}`; }
+    if (S.rounds > 1) { rb.classList.remove('hidden'); rb.textContent = `Round ${S.currentRound}/${S.rounds}`; }
     else rb.classList.add('hidden');
 
     updateTurnUI();
@@ -395,7 +402,7 @@ const Game = (() => {
     
     const chip = document.createElement('div');
     if (S.gameType === 'digits') {
-        updateOppRange(d.numberStr, false, d.correct); // numberStr will have masked format e.g. "1*3*"
+        updateOppRange(d.numberStr, false, d.correct); 
         chip.className = 'opp-chip digits ' + (d.correct ? 'correct' : '');
         chip.textContent = d.numberStr;
     } else {
@@ -435,32 +442,47 @@ const Game = (() => {
   }
 
   function updateBigNum() {
+    const el=$('big-number'), txt=$('big-number-text'), hint=$('big-number-hint');
+    
     if (S.gameType === 'digits') {
+        let html = '';
         let typeIdx = 0;
+        let allEmpty = true;
+        
         for (let i = 0; i < 4; i++) {
-            const box = $(`pin-${i}`);
-            box.classList.remove('locked', 'active');
             if (S.knownDigits[i] !== null) {
-                box.textContent = S.knownDigits[i];
-                box.classList.add('locked');
+                html += `<span style="color:#51cf66">${S.knownDigits[i]}</span>`;
+                allEmpty = false;
             } else {
                 if (S.typedValue[typeIdx]) {
-                    box.textContent = S.typedValue[typeIdx];
-                    box.classList.add('active');
+                    html += `<span>${S.typedValue[typeIdx]}</span>`;
                     typeIdx++;
+                    allEmpty = false;
                 } else {
-                    box.textContent = '_';
+                    html += `<span style="opacity:0.2">_</span>`;
                 }
             }
         }
+        
+        txt.innerHTML = html;
+        
+        if (allEmpty && !S.typedValue) {
+            el.classList.add('placeholder');
+        } else {
+            el.classList.remove('placeholder');
+        }
+        
+        const needed = S.knownDigits.filter(d=>d===null).length;
+        hint.textContent = S.typedValue.length === needed ? 'press enter' : 'type code';
+        hint.style.opacity = S.typedValue.length === needed ? '0.4' : '1';
+        
     } else {
-        const el=$('big-number'), txt=$('big-number-text'), hint=$('big-number-hint');
         if (!S.typedValue) {
           txt.textContent='?'; el.classList.add('placeholder');
-          if(S.mode==='solo'||S.myTurn) { hint.textContent='wpisz liczbę'; hint.style.opacity='1'; }
+          if(S.mode==='solo'||S.myTurn) { hint.textContent='type a number'; hint.style.opacity='1'; }
         } else {
           txt.textContent=S.typedValue; el.classList.remove('placeholder');
-          hint.textContent='wciśnij enter'; hint.style.opacity='0.4';
+          hint.textContent='press enter'; hint.style.opacity='0.4';
           el.classList.remove('num-slide-in'); void el.offsetWidth; el.classList.add('num-slide-in');
         }
     }
@@ -479,18 +501,18 @@ const Game = (() => {
     $('hidden-input').value='';
     
     if (S.gameType === 'digits') {
-        $('classic-display').classList.add('hidden');
-        $('digits-display').classList.remove('hidden');
+        $('bound-low-container').style.visibility = 'hidden';
+        $('bound-high-container').style.visibility = 'hidden';
         $('history-container').classList.remove('hidden');
         $('history-container').innerHTML = '';
-        $('submit-row').style.opacity='1'; $('submit-row').style.pointerEvents='auto';
     } else {
-        $('classic-display').classList.remove('hidden');
-        $('digits-display').classList.add('hidden');
+        $('bound-low-container').style.visibility = 'visible';
+        $('bound-high-container').style.visibility = 'visible';
         $('history-container').classList.add('hidden');
-        $('classic-display').style.opacity='1';
-        $('submit-row').style.opacity='1'; $('submit-row').style.pointerEvents='auto';
     }
+    
+    $('main-display').style.opacity='1';
+    $('submit-row').style.opacity='1'; $('submit-row').style.pointerEvents='auto';
     
     updateBigNum();
     $('feedback-text').textContent=''; $('feedback-text').className='feedback-text';
@@ -521,13 +543,18 @@ const Game = (() => {
   function startMulti() {
     SFX.play('click'); S.mode='host';
     S.currentRound=0; S.roundResults=[]; S.oppRoundResults=[];
-    $('host-name').value=''; $('host-name').disabled=false;
-    $('room-code-box').classList.add('hidden');
-    $('setup-play-btn').style.display='flex'; $('setup-play-btn').disabled=true; $('setup-play-btn').textContent='Utwórz pokój';
-    $('host-wait-msg').style.display='none';
+    
+    $('player-name').value=''; $('player-name').disabled=false;
+    $('guest-code').value=''; $('guest-code').disabled=false;
+    $('create-join-section').classList.remove('hidden');
+    $('waiting-section').classList.add('hidden');
+    $('setup-play-btn').textContent='Create Room';
+    $('guest-play-btn').textContent='Join';
+    updateSetupButtons();
+    
     setRounds(3);
     show('setup-screen');
-    setTimeout(()=>$('host-name').focus(),400);
+    setTimeout(()=>$('player-name').focus(),400);
   }
 
   function shakeUI() {
@@ -576,26 +603,23 @@ const Game = (() => {
 
         S.knownDigits = newKnown;
         S.typedValue = '';
-        updateBigNum();
 
         if (S.mode !== 'solo') {
             S.conn.send({ type:'GUESS', numberStr:maskedOppStr, attempt:S.attempt, correct:isCorrect });
         }
 
         if (isCorrect) {
+            updateBigNum();
             handleWin(guessArr.join(''));
         } else {
-            // Dodaj do historii
+            // Drop to history animation
             const hist = document.createElement('div');
-            hist.className = 'history-item';
-            guessArr.forEach((char, i) => {
-               const span = document.createElement('span');
-               span.textContent = char;
-               if (S.knownDigits[i] !== null) span.classList.add('correct');
-               hist.appendChild(span);
-            });
+            hist.className = 'history-item drop-anim';
+            hist.innerHTML = guessArr.map((c, i) => `<span class="${newKnown[i] !== null ? 'correct' : ''}">${c}</span>`).join('');
             $('history-container').prepend(hist);
+            
             SFX.play('low');
+            updateBigNum();
 
             if (S.mode !== 'solo' && !S.oppFinished) { S.myTurn = false; updateTurnUI(); }
             if (S.mode==='solo' || S.myTurn) $('hidden-input').focus();
@@ -626,12 +650,12 @@ const Game = (() => {
     } else {
         updateRange(val, isHigh);
         fb.classList.remove('visible','high','low','correct'); void fb.offsetWidth;
-        fb.textContent = isHigh?'Za dużo':'Za mało';
+        fb.textContent = isHigh?'Too high':'Too low';
         fb.classList.add('visible', isHigh?'high':'low');
         SFX.play(isHigh?'high':'low');
 
         let ht='';
-        if(diff<=3) ht='Gorąco!'; else if(diff<=8) ht='Bardzo ciepło'; else if(diff<=20) ht='Ciepło'; else if(diff<=40) ht='Zimno'; else ht='Mróz';
+        if(diff<=3) ht='Burning hot!'; else if(diff<=8) ht='Very warm'; else if(diff<=20) ht='Getting warmer'; else if(diff<=40) ht='Cold'; else ht='Freezing cold';
         sub.textContent=ht; sub.classList.add('visible');
 
         const bn=$('big-number'); bn.classList.remove('spring'); void bn.offsetWidth; bn.classList.add('spring'); setTimeout(()=>bn.classList.remove('spring'),500);
@@ -649,12 +673,16 @@ const Game = (() => {
       S.myFinalData = { score, attempts:S.attempt, time:S.elapsed };
 
       const fb=$('feedback-text'), sub=$('feedback-sub');
-      fb.textContent='Zgadłeś!'; fb.className='feedback-text correct visible';
-      sub.textContent='Udało się!'; sub.classList.add('visible');
+      fb.textContent='Correct!'; fb.className='feedback-text correct visible';
+      sub.textContent='You found it!'; sub.classList.add('visible');
       
       if(S.gameType === 'classic') {
           $('big-number-text').textContent=val; $('big-number').classList.remove('placeholder');
           $('big-number').style.color='#51cf66'; $('big-number-hint').textContent='';
+      } else {
+          // Hide cursor
+          $('cursor-blink').style.display = 'none';
+          $('big-number-hint').textContent='';
       }
 
       SFX.play('win');
@@ -732,7 +760,7 @@ const Game = (() => {
       const oppScore = S.oppRoundResults.reduce((s,r)=>s+r.score,0);
       const oppAtt = S.oppRoundResults.reduce((s,r)=>s+r.attempts,0);
 
-      $('vs-title').textContent = S.rounds>1 ? `Najlepszy z ${S.rounds}` : 'Wynik końcowy';
+      $('vs-title').textContent = S.rounds>1 ? `Best of ${S.rounds}` : 'Final Result';
       $('vs-p1-name').textContent = S.playerName;
       $('vs-p1-score').textContent = score;
       $('vs-p1-att').textContent = attempts;
@@ -741,9 +769,9 @@ const Game = (() => {
       $('vs-p2-att').textContent = oppAtt;
 
       $('vs-p1-score').classList.remove('winner'); $('vs-p2-score').classList.remove('winner');
-      if (score>oppScore) { $('vs-p1-score').classList.add('winner'); $('vs-winner').textContent=S.playerName+' wygrywa!'; }
-      else if (oppScore>score) { $('vs-p2-score').classList.add('winner'); $('vs-winner').textContent=S.oppName+' wygrywa!'; }
-      else $('vs-winner').textContent="Remis!";
+      if (score>oppScore) { $('vs-p1-score').classList.add('winner'); $('vs-winner').textContent=S.playerName+' wins!'; }
+      else if (oppScore>score) { $('vs-p2-score').classList.add('winner'); $('vs-winner').textContent=S.oppName+' wins!'; }
+      else $('vs-winner').textContent="It's a tie!";
     }
 
     SFX.play('tick');
@@ -751,11 +779,11 @@ const Game = (() => {
   }
 
   function getComment(score) {
-    if(score>=900) return ["Energia Binary Search.","Chirurgiczna precyzja.","Podejrzanie dobrze.","Twój mózg jest podkręcony."][rand(0,3)];
-    if(score>=700) return ["Nieźle. Po prostu... wystarczająco.","Solidnie. Jak uczeń na czwórkę z plusem.","Robiłeś to już wcześniej."][rand(0,2)];
-    if(score>=400) return ["Przeciętność to ciepły kocyk.","Odblokowano puchar za uczestnictwo.","Twoja intuicja potrzebuje aktualizacji."][rand(0,2)];
-    if(score>0) return ["Twój mózg to zepsuty kalkulator.","Próbowałeś z zamkniętymi oczami?","Gdzieś płacze nauczyciel matematyki."][rand(0,2)];
-    return ["Masz dial-up zamiast mózgu.","Błąd 404: Nie znaleziono skilla.","Aż bolało patrzeć."][rand(0,2)];
+    if(score>=900) return ["Binary search energy.","Surgical precision.","Suspiciously good.","Your brain is overclocked."][rand(0,3)];
+    if(score>=700) return ["Not bad. Just... adequate.","Solid. Like a B+ student.","You've done this before."][rand(0,2)];
+    if(score>=400) return ["Mediocrity is a warm blanket.","Participation trophy unlocked.","Your intuition needs an update."][rand(0,2)];
+    if(score>0) return ["Your brain is a broken calculator.","Did you try with your eyes closed?","A math teacher is crying somewhere."][rand(0,2)];
+    return ["Your brain runs on dial-up.","404: Skill not found.","That was painful to watch."][rand(0,2)];
   }
 
   function playAgain() { 

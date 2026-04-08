@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pl">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
@@ -28,12 +28,12 @@
                 </div>
                 
                 <div class="mode-tabs">
-                    <button class="tab-btn active" id="tab-classic" onclick="Game.setGameType('classic')">Klasyczny (0-100)</button>
-                    <button class="tab-btn" id="tab-digits" onclick="Game.setGameType('digits')">Kod PIN (4 cyfry)</button>
+                    <button class="tab-btn active" id="tab-classic" onclick="Game.setGameType('classic')">Classic (0-100)</button>
+                    <button class="tab-btn" id="tab-digits" onclick="Game.setGameType('digits')">PIN Code (4 digits)</button>
                 </div>
 
                 <div class="intro-bottom">
-                    <p class="intro-desc" id="intro-desc-text">Znajdź ukrytą liczbę od 0 do 100.<br>Mniej prób = wyższy wynik.</p>
+                    <p class="intro-desc" id="intro-desc-text">Find the hidden number from 0 to 100.<br>Fewer attempts = higher score.</p>
                     <div class="mode-icons">
                         <div class="mode-col">
                             <button class="mode-icon-btn" onclick="Game.startSolo()">
@@ -53,86 +53,76 @@
 
             <section class="screen" id="setup-screen">
                 <button class="back-btn" onclick="Game.playAgain()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
-                <h2 class="setup-title">Utwórz grę</h2>
+                <h2 class="setup-title">Multiplayer</h2>
+                
                 <div class="setup-field">
-                    <label>Twój nick</label>
-                    <input type="text" class="game-input" id="host-name" placeholder="Nick" maxlength="16" autocomplete="off">
-                </div>
-                <div class="setup-field">
-                    <label>Rundy</label>
-                    <div class="round-selector" id="round-selector">
-                        <button class="round-pill" data-rounds="1" onclick="Game.setRounds(1)">1</button>
-                        <button class="round-pill active" data-rounds="3" onclick="Game.setRounds(3)">3</button>
-                        <button class="round-pill" data-rounds="5" onclick="Game.setRounds(5)">5</button>
-                    </div>
+                    <label>Your nickname</label>
+                    <input type="text" class="game-input" id="player-name" placeholder="Nickname" maxlength="16" autocomplete="off">
                 </div>
                 
-                <div id="room-code-box" class="hidden flex-col" style="margin-bottom:16px;">
-                    <label style="font-size:11px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.05em;">Kod pokoju dla znajomego:</label>
+                <div id="create-join-section" style="width: 100%; display: flex; flex-direction: column; align-items: center;">
+                    <div class="setup-field">
+                        <label>Rounds</label>
+                        <div class="round-selector" id="round-selector">
+                            <button class="round-pill" data-rounds="1" onclick="Game.setRounds(1)">1</button>
+                            <button class="round-pill active" data-rounds="3" onclick="Game.setRounds(3)">3</button>
+                            <button class="round-pill" data-rounds="5" onclick="Game.setRounds(5)">5</button>
+                        </div>
+                    </div>
+                    
+                    <button class="pill-btn" id="setup-play-btn" style="max-width:280px;width:100%" disabled onclick="Game.hostPlay()">Create Room</button>
+                    
+                    <div class="divider">or enter code</div>
+                    
+                    <div class="setup-field" style="margin-bottom:8px;">
+                        <input type="text" class="game-input" id="guest-code" placeholder="ROOM CODE" maxlength="6" autocomplete="off" style="letter-spacing: 0.15em;">
+                    </div>
+                    <button class="pill-btn" id="guest-play-btn" style="max-width:280px;width:100%" disabled onclick="Game.guestPlay()">Join</button>
+                </div>
+
+                <div id="waiting-section" class="hidden flex-col" style="width:100%;">
+                    <label style="font-size:11px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">Your room code:</label>
                     <div class="room-code-display" id="room-code-display">------</div>
+                    <p class="host-wait" id="host-wait-msg" style="display:block; margin-top:24px;">Waiting for opponent...</p>
                 </div>
-
-                <button class="pill-btn" id="setup-play-btn" style="max-width:280px;width:100%" disabled onclick="Game.hostPlay()">Utwórz pokój</button>
-                <p class="host-wait" id="host-wait-msg">Oczekiwanie na gracza...</p>
-            </section>
-
-            <section class="screen" id="challenge-intro-screen">
-                <button class="back-btn" onclick="Game.playAgain()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
-                <span class="challenge-badge">Dołącz do gry</span>
-                <div class="setup-field" style="margin-top: 10px;">
-                    <label>Twój nick</label>
-                    <input type="text" class="game-input" id="guest-name" placeholder="Nick" maxlength="16" autocomplete="off">
-                </div>
-                <div class="setup-field">
-                    <label>6-cyfrowy kod pokoju</label>
-                    <input type="text" class="game-input" id="guest-code" placeholder="Np. 123456" maxlength="6" autocomplete="off">
-                </div>
-                <button class="pill-btn" id="guest-play-btn" style="max-width:280px;width:100%;margin-top:12px" onclick="Game.guestPlay()">Połącz</button>
             </section>
 
             <section class="screen" id="choose-screen">
-                <h2 class="setup-title">Wybierz sekret</h2>
-                <p class="setup-desc" id="choose-status">Wybierz, co twój przeciwnik będzie zgadywał.</p>
+                <h2 class="setup-title">Pick a Secret</h2>
+                <p class="setup-desc" id="choose-status">Choose what your opponent will guess.</p>
                 <div class="choose-timer" id="choose-timer"><span id="choose-sec">15</span><span class="choose-ms" id="choose-ms">.000</span></div>
                 <div class="setup-field" style="margin-top:16px">
                     <input type="number" class="game-input" id="secret-input" placeholder="0 - 100" autocomplete="off">
                 </div>
-                <button class="pill-btn" id="lock-btn" style="max-width:280px;width:100%" onclick="Game.lockSecret()">Zatwierdź</button>
+                <button class="pill-btn" id="lock-btn" style="max-width:280px;width:100%" onclick="Game.lockSecret()">Lock In</button>
             </section>
 
             <section class="screen" id="game-screen">
                 <div class="game-header">
                     <div class="att-counter">
                         <span class="att-num" id="att-num">0</span>
-                        <span class="att-label">prób</span>
+                        <span class="att-label">attempts</span>
                     </div>
-                    <span class="turn-badge hidden" id="turn-badge"><span class="turn-dot"></span> <span id="turn-text">Twój ruch</span></span>
-                    <span class="round-badge hidden" id="round-badge">Runda 1/3</span>
+                    <span class="turn-badge hidden" id="turn-badge"><span class="turn-dot"></span> <span id="turn-text">Your turn</span></span>
+                    <span class="round-badge hidden" id="round-badge">Round 1/3</span>
                     <span class="game-timer" id="game-timer">00:00</span>
                 </div>
 
-                <div class="range-display" id="classic-display">
-                    <div class="range-bound">
+                <div class="range-display" id="main-display">
+                    <div class="range-bound" id="bound-low-container">
                         <span class="range-num" id="range-low">0</span>
                         <span class="range-arrow" id="range-low-arrow">low</span>
                     </div>
                     <div class="range-center" id="range-center">
                         <div class="big-number placeholder" id="big-number">
-                            <span id="big-number-text">?</span><span class="cursor-blink"></span>
+                            <span id="big-number-text">?</span><span class="cursor-blink" id="cursor-blink"></span>
                         </div>
-                        <div class="big-number-hint" id="big-number-hint">wpisz liczbę</div>
+                        <div class="big-number-hint" id="big-number-hint">type a number</div>
                     </div>
-                    <div class="range-bound">
+                    <div class="range-bound" id="bound-high-container">
                         <span class="range-num" id="range-high">100</span>
                         <span class="range-arrow" id="range-high-arrow">high</span>
                     </div>
-                </div>
-
-                <div class="pin-display hidden" id="digits-display">
-                    <div class="pin-box" id="pin-0">_</div>
-                    <div class="pin-box" id="pin-1">_</div>
-                    <div class="pin-box" id="pin-2">_</div>
-                    <div class="pin-box" id="pin-3">_</div>
                 </div>
 
                 <input class="hidden-input" id="hidden-input" type="text" inputmode="numeric" autocomplete="off">
@@ -153,13 +143,12 @@
                     </button>
                 </div>
 
-                <div class="history-container hidden" id="history-container">
-                    </div>
+                <div class="history-container hidden" id="history-container"></div>
             </section>
 
             <section class="screen" id="wait-result-screen">
-                <h2 class="setup-title" style="color:#51cf66">Udało się!</h2>
-                <p class="setup-desc">Czekam aż przeciwnik skończy...</p>
+                <h2 class="setup-title" style="color:#51cf66">You found it!</h2>
+                <p class="setup-desc">Waiting for opponent to finish...</p>
                 <div class="mode-icon-btn ring-btn" style="margin-top:24px;pointer-events:none"></div>
             </section>
 
@@ -169,26 +158,26 @@
                     <span class="result-max">/ 1000</span>
                 </div>
                 <div class="result-stats stagger-in" style="animation-delay:0.25s">
-                    <div class="result-stat"><span class="result-stat-val" id="result-attempts">-</span><span class="result-stat-label">Próby</span></div>
-                    <div class="result-stat"><span class="result-stat-val" id="result-time">-</span><span class="result-stat-label">Czas</span></div>
-                    <div class="result-stat"><span class="result-stat-val" id="result-number">-</span><span class="result-stat-label">Cel</span></div>
+                    <div class="result-stat"><span class="result-stat-val" id="result-attempts">-</span><span class="result-stat-label">Attempts</span></div>
+                    <div class="result-stat"><span class="result-stat-val" id="result-time">-</span><span class="result-stat-label">Time</span></div>
+                    <div class="result-stat"><span class="result-stat-val" id="result-number">-</span><span class="result-stat-label">Target</span></div>
                 </div>
                 <p class="result-comment stagger-in" style="animation-delay:0.4s" id="result-comment"></p>
                 <div class="vs-card hidden" id="vs-card">
-                    <div class="vs-title" id="vs-title">Wynik Zmagań</div>
+                    <div class="vs-title" id="vs-title">Challenge Result</div>
                     <div class="vs-row">
                         <div class="vs-player"><span class="vs-player-name" id="vs-p1-name">-</span><span class="vs-player-val" id="vs-p1-score">0</span></div>
-                        <span class="vs-label">Wynik</span>
+                        <span class="vs-label">Score</span>
                         <div class="vs-player"><span class="vs-player-name" id="vs-p2-name">-</span><span class="vs-player-val" id="vs-p2-score">0</span></div>
                     </div>
                     <div class="vs-row">
                         <div class="vs-player"><span class="vs-player-val" id="vs-p1-att">-</span></div>
-                        <span class="vs-label">Próby</span>
+                        <span class="vs-label">Attempts</span>
                         <div class="vs-player"><span class="vs-player-val" id="vs-p2-att">-</span></div>
                     </div>
                     <div class="vs-winner-banner" id="vs-winner"></div>
                 </div>
-                <button class="pill-btn stagger-in" style="max-width:260px;width:100%;animation-delay:0.55s" onclick="Game.playAgain()">Zagraj ponownie</button>
+                <button class="pill-btn stagger-in" style="max-width:260px;width:100%;animation-delay:0.55s" onclick="Game.playAgain()">Play Again</button>
             </section>
         </div>
 
@@ -196,16 +185,16 @@
             <div class="opp-inner">
                 <div class="opp-header-bar">
                     <div class="opp-name-badge">
-                        <span class="opp-name-label">Przeciwnik</span>
+                        <span class="opp-name-label">Opponent</span>
                         <span class="opp-name-val" id="opp-card-name">—</span>
                     </div>
                     <div class="opp-turn-pill your-turn" id="opp-turn-pill">
                         <span class="opp-turn-dot"></span>
-                        <span id="opp-turn-text">Czeka</span>
+                        <span id="opp-turn-text">Waiting</span>
                     </div>
                     <div class="opp-att">
                         <span class="opp-att-num" id="opp-card-att">0</span>
-                        <span class="opp-att-label"> prób</span>
+                        <span class="opp-att-label"> att</span>
                     </div>
                 </div>
                 <div class="opp-range">
