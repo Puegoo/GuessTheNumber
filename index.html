@@ -26,6 +26,8 @@ html, body {
 
 body { display: flex; align-items: center; justify-content: center; }
 
+#app-wrapper { display: flex; align-items: center; gap: 20px; width: 100%; height: 100%; justify-content: center; }
+
 #game-container {
   position: relative; width: 100%; height: 100%;
   background: #000; overflow: hidden;
@@ -36,7 +38,78 @@ body { display: flex; align-items: center; justify-content: center; }
   #game-container {
     width: 440px; height: 640px; border-radius: 20px;
     box-shadow: 0 0 0 1px rgba(0,0,0,0.08), 0 30px 90px rgba(0,0,0,0.35), 0 10px 35px rgba(0,0,0,0.2);
+    flex-shrink: 0;
   }
+}
+
+/* --- Opponent Card (multiplayer) --- */
+#opp-card {
+  display: none; width: 260px; height: 640px;
+  background: #000; border-radius: 20px; overflow: hidden;
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.08), 0 30px 90px rgba(0,0,0,0.35), 0 10px 35px rgba(0,0,0,0.2);
+  flex-direction: column; padding: 28px 20px; flex-shrink: 0;
+}
+body.multi-active #opp-card { display: flex; }
+
+.opp-header { display: flex; flex-direction: column; gap: 2px; margin-bottom: 16px; }
+.opp-label { font-size: 10px; font-weight: 600; color: rgba(255,255,255,0.25); text-transform: uppercase; letter-spacing: 0.1em; }
+.opp-name { font-size: 22px; font-weight: 800; letter-spacing: -0.03em; }
+
+.opp-turn-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 28px; padding: 0 12px; border-radius: 28px;
+  font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;
+  margin-bottom: 20px; transition: all 0.3s;
+}
+.opp-turn-pill.their-turn { background: rgba(255,200,0,0.1); color: #ffd43b; }
+.opp-turn-pill.your-turn { background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.25); }
+.opp-turn-pill.done { background: rgba(81,207,102,0.1); color: #51cf66; }
+.opp-turn-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.opp-turn-pill.their-turn .opp-turn-dot { animation: pulse 1s infinite alternate; }
+
+.opp-stats { display: flex; align-items: baseline; gap: 6px; margin-bottom: 16px; }
+.opp-att-num { font-size: 32px; font-weight: 900; letter-spacing: -0.04em; }
+.opp-att-label { font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.3); text-transform: uppercase; }
+
+.opp-last-wrap { margin-bottom: 16px; }
+.opp-last-label { font-size: 10px; font-weight: 500; color: rgba(255,255,255,0.25); text-transform: uppercase; letter-spacing: 0.06em; display: block; margin-bottom: 4px; }
+.opp-last-val { font-size: 36px; font-weight: 900; letter-spacing: -0.04em; transition: color 0.3s; }
+.opp-last-val.high { color: #ff6b6b; }
+.opp-last-val.low { color: #4dabf7; }
+.opp-last-val.correct { color: #51cf66; }
+.opp-last-hint { font-size: 12px; font-weight: 600; margin-top: 2px; }
+.opp-last-hint.high { color: #ff6b6b; }
+.opp-last-hint.low { color: #4dabf7; }
+.opp-last-hint.correct { color: #51cf66; }
+
+.opp-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: auto; overflow-y: auto; align-content: flex-end; scrollbar-width: none; }
+.opp-chips::-webkit-scrollbar { display: none; }
+.opp-chip {
+  height: 26px; min-width: 34px; padding: 0 8px; border-radius: 26px;
+  font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+  font-variant-numeric: tabular-nums;
+}
+.opp-chip.high { background: rgba(255,107,107,0.1); color: #ff6b6b; }
+.opp-chip.low { background: rgba(77,171,247,0.1); color: #4dabf7; }
+.opp-chip.correct { background: rgba(81,207,102,0.12); color: #51cf66; }
+
+/* Mobile opponent card */
+@media (max-width: 767px) {
+  #app-wrapper { flex-direction: column; gap: 0; }
+  body.multi-active #opp-card {
+    position: fixed; top: 0; right: 0; z-index: 200;
+    width: 150px; height: auto; max-height: 50vh;
+    border-radius: 0 0 0 16px; padding: 14px 12px;
+    box-shadow: -4px 4px 20px rgba(0,0,0,0.5);
+    border-left: 1px solid rgba(255,255,255,0.06);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  body.multi-active #opp-card .opp-name { font-size: 15px; }
+  body.multi-active #opp-card .opp-att-num { font-size: 22px; }
+  body.multi-active #opp-card .opp-last-val { font-size: 24px; }
+  body.multi-active #opp-card .opp-stats { margin-bottom: 8px; }
+  body.multi-active #opp-card .opp-last-wrap { margin-bottom: 8px; }
+  body.multi-active #opp-card .opp-turn-pill { margin-bottom: 10px; }
 }
 
 /* --- Screens --- */
@@ -207,13 +280,25 @@ body { display: flex; align-items: center; justify-content: center; }
 
 /* === CHOOSE SECRET === */
 #choose-screen { justify-content: center; }
-.choose-timer { font-size: min(72px, 18vw); font-weight: 900; letter-spacing: -0.04em; margin: 12px 0; }
+.choose-timer { font-size: min(72px, 18vw); font-weight: 900; letter-spacing: -0.04em; margin: 12px 0; font-variant-numeric: tabular-nums; }
+.choose-ms { font-size: 0.4em; font-weight: 700; color: rgba(255,255,255,0.35); }
 
 /* === GAME SCREEN === */
 #game-screen { justify-content: flex-start; padding-top: 28px; cursor: default; user-select: none; }
 
 .game-header { width: 100%; display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; padding: 0 4px; }
 .game-timer { font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.3); font-variant-numeric: tabular-nums; }
+
+/* Turn badge */
+.turn-badge {
+  display: inline-flex; align-items: center; gap: 5px; height: 28px; padding: 0 12px;
+  border-radius: 28px; font-size: 11px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.04em; transition: all 0.3s;
+}
+.turn-badge.my-turn { background: rgba(81,207,102,0.12); color: #51cf66; }
+.turn-badge.opp-turn { background: rgba(255,200,0,0.1); color: #ffd43b; }
+.turn-badge .turn-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.turn-badge.my-turn .turn-dot { animation: pulse 0.8s infinite alternate; }
 
 /* Round badge */
 .round-badge {
@@ -230,44 +315,14 @@ body { display: flex; align-items: center; justify-content: center; }
 @keyframes attBump { 0% { transform: scale(1); } 40% { transform: scale(1.3); } 100% { transform: scale(1); } }
 .att-num.bump { animation: attBump 0.35s cubic-bezier(0.34,1.56,0.64,1); }
 
-/* === DUAL CARD LAYOUT (Multiplayer) === */
-.dual-cards { display: flex; gap: 10px; width: 100%; margin-bottom: 8px; }
-.player-card {
-  flex: 1; border-radius: 14px; padding: 12px; min-height: 80px;
-  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
-  display: flex; flex-direction: column; gap: 4px;
-  transition: border-color 0.3s;
-}
-.player-card.me { border-color: rgba(255,255,255,0.12); }
-.player-card.opp { border-color: rgba(255,255,255,0.06); }
-.player-card .pc-name { font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.04em; }
-.player-card .pc-name.me { color: rgba(255,255,255,0.7); }
-.player-card .pc-secret { font-size: 11px; color: rgba(255,255,255,0.2); margin-top: 2px; }
-.player-card .pc-secret span { color: rgba(255,255,255,0.5); font-weight: 600; }
-.player-card .pc-att { font-size: 18px; font-weight: 800; margin-top: 4px; }
-.player-card .pc-status { font-size: 11px; font-weight: 500; margin-top: 2px; }
-.player-card .pc-status.high { color: #ff6b6b; }
-.player-card .pc-status.low { color: #4dabf7; }
-.player-card .pc-status.correct { color: #51cf66; }
-.player-card .pc-status.waiting { color: rgba(255,255,255,0.2); }
-.player-card .pc-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
-.pc-chip {
-  height: 24px; min-width: 32px; padding: 0 7px; border-radius: 24px;
-  font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center;
-  font-variant-numeric: tabular-nums;
-}
-.pc-chip.high { background: rgba(255,107,107,0.1); color: #ff6b6b; }
-.pc-chip.low { background: rgba(77,171,247,0.1); color: #4dabf7; }
-.pc-chip.correct { background: rgba(81,207,102,0.12); color: #51cf66; }
-
 /* Big number display */
-.big-number-area { width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; min-height: 100px; margin-bottom: 2px; }
+.big-number-area { width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; min-height: 100px; margin-bottom: 2px; transition: opacity 0.3s; }
 .big-number { font-size: min(80px, 20vw); font-weight: 900; letter-spacing: -0.05em; line-height: 1; color: #fff; transition: color 0.3s; min-height: 1.1em; display: flex; align-items: center; justify-content: center; }
 .big-number.placeholder { color: rgba(255,255,255,0.12); }
 .big-number .cursor-blink { display: inline-block; width: 3px; height: 0.7em; background: rgba(255,255,255,0.5); margin-left: 3px; animation: cursorBlink 1s step-end infinite; }
 @keyframes cursorBlink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
 .hidden-input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
-.big-number-hint { font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.2); margin-top: 6px; }
+.big-number-hint { font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.2); margin-top: 6px; transition: opacity 0.3s; }
 
 /* Feedback */
 .feedback-strip { width: 100%; display: flex; align-items: center; justify-content: center; min-height: 40px; margin-bottom: 4px; }
@@ -280,7 +335,7 @@ body { display: flex; align-items: center; justify-content: center; }
 .feedback-sub.visible { opacity: 1; }
 
 /* Submit */
-.submit-row { display: flex; align-items: center; justify-content: center; gap: 14px; width: 100%; margin-bottom: 10px; }
+.submit-row { display: flex; align-items: center; justify-content: center; gap: 14px; width: 100%; margin-bottom: 10px; transition: opacity 0.3s; }
 .circle-btn {
   width: 52px; height: 52px; border-radius: 50%; border: none;
   background: #fff; color: #000; display: flex; align-items: center; justify-content: center;
@@ -371,6 +426,7 @@ body { display: flex; align-items: center; justify-content: center; }
 </style>
 </head>
 <body>
+<div id="app-wrapper">
 <div id="game-container">
   <div class="heat-flash" id="heat-flash"></div>
   <div class="particle-container" id="particles"></div>
@@ -454,7 +510,7 @@ body { display: flex; align-items: center; justify-content: center; }
   <section class="screen" id="choose-screen">
     <h2 class="setup-title">Pick a Number</h2>
     <p class="setup-desc" id="choose-status">Choose a secret for your opponent to guess.</p>
-    <div class="choose-timer" id="choose-timer">15</div>
+    <div class="choose-timer" id="choose-timer"><span id="choose-sec">15</span><span class="choose-ms" id="choose-ms">.000</span></div>
     <div class="setup-field" style="margin-top:16px">
       <input type="number" class="game-input" id="secret-input" placeholder="1 – 100" min="1" max="100">
     </div>
@@ -468,29 +524,12 @@ body { display: flex; align-items: center; justify-content: center; }
         <span class="att-num" id="att-num">0</span>
         <span class="att-label">attempts</span>
       </div>
+      <span class="turn-badge hidden" id="turn-badge"><span class="turn-dot"></span> <span id="turn-text">Your turn</span></span>
       <span class="round-badge hidden" id="round-badge">Round 1/3</span>
       <span class="game-timer" id="game-timer">00:00</span>
     </div>
 
-    <!-- Dual cards for multiplayer -->
-    <div class="dual-cards hidden" id="dual-cards">
-      <div class="player-card me">
-        <div class="pc-name me" id="pc-me-name">You</div>
-        <div class="pc-secret">your secret: <span id="pc-me-secret">?</span></div>
-        <div class="pc-att" id="pc-me-att">0</div>
-        <div class="pc-status waiting" id="pc-me-status">—</div>
-        <div class="pc-chips" id="pc-me-chips"></div>
-      </div>
-      <div class="player-card opp">
-        <div class="pc-name" id="pc-opp-name">Opponent</div>
-        <div class="pc-secret">their secret: <span id="pc-opp-secret">?</span></div>
-        <div class="pc-att" id="pc-opp-att">0</div>
-        <div class="pc-status waiting" id="pc-opp-status">—</div>
-        <div class="pc-chips" id="pc-opp-chips"></div>
-      </div>
-    </div>
-
-    <div class="big-number-area">
+    <div class="big-number-area" id="big-number-area">
       <div class="big-number placeholder" id="big-number">
         <span id="big-number-text">?</span><span class="cursor-blink"></span>
       </div>
@@ -505,7 +544,7 @@ body { display: flex; align-items: center; justify-content: center; }
       </div>
     </div>
 
-    <div class="submit-row">
+    <div class="submit-row" id="submit-row">
       <button class="circle-btn small" onclick="Game.clearInput()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
@@ -554,6 +593,29 @@ body { display: flex; align-items: center; justify-content: center; }
   </section>
 </div>
 
+<!-- OPPONENT CARD (multiplayer) -->
+<div id="opp-card">
+  <div class="opp-header">
+    <span class="opp-label">Opponent</span>
+    <span class="opp-name" id="opp-card-name">—</span>
+  </div>
+  <div class="opp-turn-pill your-turn" id="opp-turn-pill">
+    <span class="opp-turn-dot"></span>
+    <span id="opp-turn-text">Your turn</span>
+  </div>
+  <div class="opp-stats">
+    <span class="opp-att-num" id="opp-card-att">0</span>
+    <span class="opp-att-label">attempts</span>
+  </div>
+  <div class="opp-last-wrap">
+    <span class="opp-last-label">Last guess</span>
+    <span class="opp-last-val" id="opp-card-last">—</span>
+    <div class="opp-last-hint" id="opp-card-hint"></div>
+  </div>
+  <div class="opp-chips" id="opp-card-chips"></div>
+</div>
+</div>
+
 <script>
 const Game = (() => {
   // ===== AUDIO =====
@@ -593,6 +655,7 @@ const Game = (() => {
           case 'win': [0,.12,.24,.36,.48].forEach((d,i)=>{const f=[523.25,659.25,783.99,1046.5,1318.5]; const o=c.createOscillator(),g=c.createGain(); o.type='sine'; o.frequency.setValueAtTime(f[i],now+d); g.gain.setValueAtTime(0.12,now+d); g.gain.exponentialRampToValueAtTime(0.001,now+d+0.3); o.connect(g).connect(c.destination); o.start(now+d); o.stop(now+d+0.35);}); break;
           case 'whoosh': { const bs=c.sampleRate*0.15,b=c.createBuffer(1,bs,c.sampleRate),d=b.getChannelData(0); for(let i=0;i<bs;i++) d[i]=(Math.random()*2-1)*(1-i/bs); const s=c.createBufferSource(); s.buffer=b; const g=c.createGain(),f=c.createBiquadFilter(); f.type='bandpass'; f.frequency.setValueAtTime(2000,now); f.frequency.linearRampToValueAtTime(500,now+0.15); f.Q.value=2; g.gain.setValueAtTime(0.08,now); g.gain.exponentialRampToValueAtTime(0.001,now+0.15); s.connect(f).connect(g).connect(c.destination); s.start(now); s.stop(now+0.15); break; }
           case 'click': osc('sine',1200,0.04,0.06); break;
+          case 'turn': osc('triangle',800,0.12,0.1); setTimeout(()=>osc('triangle',1000,0.1,0.08),80); break;
         }
       } catch(e){}
     }
@@ -607,7 +670,9 @@ const Game = (() => {
     peer:null, conn:null, matchId:null, oppName:'', rounds:3, currentRound:0,
     mySecret:0, oppSecret:0, iAmReady:false, oppReady:false,
     myFinalData:null, oppFinalData:null, choosingInterval:null,
-    roundResults:[], oppRoundResults:[], oppGuessCount:0, oppLastGuess:null
+    roundResults:[], oppRoundResults:[],
+    // Turn-based
+    myTurn:false, iFinished:false, oppFinished:false
   };
 
   const $ = id => document.getElementById(id);
@@ -635,13 +700,61 @@ const Game = (() => {
     }
   }
 
+  // ===== TURN UI =====
+  function updateTurnUI() {
+    if (S.mode === 'solo') return;
+    const tb = $('turn-badge');
+    const tt = $('turn-text');
+    const ot = $('opp-turn-pill');
+    const otxt = $('opp-turn-text');
+    tb.classList.remove('hidden');
+
+    if (S.iFinished) {
+      tb.className = 'turn-badge opp-turn';
+      tt.textContent = 'Finished';
+      $('big-number-area').style.opacity = '0.3';
+      $('submit-row').style.opacity = '0.3';
+      $('submit-row').style.pointerEvents = 'none';
+      $('big-number-hint').textContent = 'watching opponent...';
+
+      ot.className = 'opp-turn-pill their-turn';
+      otxt.textContent = S.oppFinished ? 'Finished' : 'Guessing...';
+      if (S.oppFinished) ot.className = 'opp-turn-pill done';
+      return;
+    }
+
+    if (S.myTurn) {
+      tb.className = 'turn-badge my-turn';
+      tt.textContent = 'Your turn';
+      $('big-number-area').style.opacity = '1';
+      $('submit-row').style.opacity = '1';
+      $('submit-row').style.pointerEvents = 'auto';
+      if (!S.typedValue) $('big-number-hint').textContent = 'your turn — type a number';
+
+      ot.className = 'opp-turn-pill your-turn';
+      otxt.textContent = 'Waiting';
+    } else {
+      tb.className = 'turn-badge opp-turn';
+      tt.textContent = "Opp's turn";
+      $('big-number-area').style.opacity = '0.35';
+      $('submit-row').style.opacity = '0.3';
+      $('submit-row').style.pointerEvents = 'none';
+      S.typedValue = '';
+      updateBigNum();
+      $('big-number-hint').textContent = "opponent's turn...";
+
+      ot.className = 'opp-turn-pill their-turn';
+      otxt.textContent = 'Guessing...';
+    }
+  }
+
   // ===== INIT =====
   function init() {
     const matchId = new URLSearchParams(location.search).get('match');
     if (matchId) { S.mode='guest'; S.matchId=matchId; show('challenge-intro-screen'); }
     else show('intro-screen');
     document.addEventListener('keydown', onKey);
-    $('game-screen').addEventListener('click', ()=>{ if(!S.gameOver) $('hidden-input').focus(); });
+    $('game-screen').addEventListener('click', ()=>{ if(!S.gameOver && (S.mode==='solo'||S.myTurn)) $('hidden-input').focus(); });
     $('host-name').addEventListener('input', onHostInput);
     $('host-name').addEventListener('keydown', e=>{ if(e.key==='Enter') hostPlay(); });
     $('guest-name').addEventListener('keydown', e=>{ if(e.key==='Enter') guestPlay(); });
@@ -662,8 +775,8 @@ const Game = (() => {
       if (d.type==='INIT') { S.oppName=d.name; S.rounds=d.rounds||3; S.conn.send({type:'INIT_ACK',name:S.playerName}); startChoosing(); }
       else if (d.type==='INIT_ACK') { S.oppName=d.name; startChoosing(); }
       else if (d.type==='READY') { S.oppSecret=d.secret; S.oppReady=true; checkStartRound(); }
-      else if (d.type==='GUESS') { updateOppCard(d); }
-      else if (d.type==='FINISH') { S.oppFinalData=d.payload; checkShowResult(); }
+      else if (d.type==='GUESS') { handleOppGuess(d); }
+      else if (d.type==='FINISH') { S.oppFinalData=d.payload; S.oppFinished=true; updateTurnUI(); updateOppTurnUI(); checkShowResult(); }
     });
   }
 
@@ -726,20 +839,26 @@ const Game = (() => {
     S.currentRound++;
     S.iAmReady = false; S.oppReady = false;
     S.myFinalData = null; S.oppFinalData = null;
-    S.oppGuessCount = 0; S.oppLastGuess = null;
+    S.iFinished = false; S.oppFinished = false;
+
+    // Hide opp card during choosing
+    document.body.classList.remove('multi-active');
 
     show('choose-screen');
     $('choose-status').innerHTML = `Round ${S.currentRound}/${S.rounds} vs <b>${S.oppName}</b>`;
     $('secret-input').value = ''; $('secret-input').disabled = false;
     $('lock-btn').disabled = false; $('lock-btn').textContent = 'Lock In';
 
-    let t = 15;
-    $('choose-timer').textContent = t;
+    const deadline = Date.now() + 15000;
     clearInterval(S.choosingInterval);
     S.choosingInterval = setInterval(()=>{
-      t--; $('choose-timer').textContent = t;
-      if (t<=0) { clearInterval(S.choosingInterval); if(!S.iAmReady) lockSecret(); }
-    }, 1000);
+      const remaining = Math.max(0, deadline - Date.now());
+      const sec = Math.floor(remaining / 1000);
+      const ms = remaining % 1000;
+      $('choose-sec').textContent = sec;
+      $('choose-ms').textContent = '.' + String(ms).padStart(3, '0');
+      if (remaining <= 0) { clearInterval(S.choosingInterval); if(!S.iAmReady) lockSecret(); }
+    }, 37);
   }
 
   function lockSecret() {
@@ -761,44 +880,72 @@ const Game = (() => {
     clearInterval(S.choosingInterval);
     S.target = S.oppSecret;
     resetGameUI();
-    // Show dual cards
-    $('dual-cards').classList.remove('hidden');
-    $('pc-me-name').textContent = S.playerName;
-    $('pc-opp-name').textContent = S.oppName;
-    $('pc-me-secret').textContent = S.mySecret;
-    $('pc-opp-secret').textContent = '?';
-    $('pc-me-att').textContent = '0';
-    $('pc-opp-att').textContent = '0';
-    $('pc-me-status').textContent = '—'; $('pc-me-status').className = 'pc-status waiting';
-    $('pc-opp-status').textContent = '—'; $('pc-opp-status').className = 'pc-status waiting';
-    $('pc-me-chips').innerHTML = '';
-    $('pc-opp-chips').innerHTML = '';
+
+    // Setup turn-based: host goes first
+    S.myTurn = (S.mode === 'host');
+    S.iFinished = false;
+    S.oppFinished = false;
+
+    // Show opponent card
+    document.body.classList.add('multi-active');
+    $('opp-card-name').textContent = S.oppName;
+    $('opp-card-att').textContent = '0';
+    $('opp-card-last').textContent = '—';
+    $('opp-card-last').className = 'opp-last-val';
+    $('opp-card-hint').textContent = '';
+    $('opp-card-hint').className = 'opp-last-hint';
+    $('opp-card-chips').innerHTML = '';
 
     const rb = $('round-badge');
     if (S.rounds > 1) { rb.classList.remove('hidden'); rb.textContent = `Round ${S.currentRound}/${S.rounds}`; }
     else rb.classList.add('hidden');
 
+    updateTurnUI();
     show('game-screen');
     startTimer();
   }
 
-  function updateOppCard(d) {
-    S.oppGuessCount = d.attempt;
-    S.oppLastGuess = d;
-    $('pc-opp-att').textContent = d.attempt;
+  function handleOppGuess(d) {
+    // Update opponent card
+    $('opp-card-att').textContent = d.attempt;
+    $('opp-card-last').textContent = d.number;
+
+    const cls = d.correct ? 'correct' : (d.isHigh ? 'high' : 'low');
+    $('opp-card-last').className = 'opp-last-val ' + cls;
+    $('opp-card-hint').className = 'opp-last-hint ' + cls;
+    $('opp-card-hint').textContent = d.correct ? 'Found it!' : (d.isHigh ? '↓ Too high' : '↑ Too low');
 
     const chip = document.createElement('div');
-    const cls = d.correct ? 'correct' : (d.isHigh ? 'high' : 'low');
-    chip.className = 'pc-chip ' + cls;
+    chip.className = 'opp-chip ' + cls;
     chip.textContent = d.number;
-    $('pc-opp-chips').appendChild(chip);
+    $('opp-card-chips').appendChild(chip);
+    $('opp-card-chips').scrollTop = $('opp-card-chips').scrollHeight;
 
     if (d.correct) {
-      $('pc-opp-status').textContent = 'Found it!';
-      $('pc-opp-status').className = 'pc-status correct';
+      S.oppFinished = true;
+      updateOppTurnUI();
+      // If I haven't finished, I get uninterrupted turns now
+      if (!S.iFinished) {
+        S.myTurn = true;
+        updateTurnUI();
+        Audio.play('turn');
+      }
     } else {
-      $('pc-opp-status').textContent = d.isHigh ? '↓ Too high' : '↑ Too low';
-      $('pc-opp-status').className = 'pc-status ' + (d.isHigh ? 'high' : 'low');
+      // Opponent didn't find it — it's now my turn (if I haven't finished)
+      if (!S.iFinished) {
+        S.myTurn = true;
+        updateTurnUI();
+        Audio.play('turn');
+      }
+    }
+  }
+
+  function updateOppTurnUI() {
+    const ot = $('opp-turn-pill');
+    const otxt = $('opp-turn-text');
+    if (S.oppFinished) {
+      ot.className = 'opp-turn-pill done';
+      otxt.textContent = 'Finished';
     }
   }
 
@@ -807,6 +954,8 @@ const Game = (() => {
     const scr = document.querySelector('.screen.active');
     if (scr && scr.id === 'choose-screen' && e.key === 'Enter') { lockSecret(); return; }
     if (!scr || scr.id !== 'game-screen' || S.gameOver) return;
+    if (S.mode !== 'solo' && !S.myTurn) return;
+    if (S.mode !== 'solo' && S.iFinished) return;
 
     if (e.key >= '0' && e.key <= '9') { e.preventDefault(); if(S.typedValue.length<3){ S.typedValue+=e.key; Audio.play('type'); updateBigNum(); } }
     else if (e.key==='Backspace') { e.preventDefault(); if(S.typedValue.length>0){ S.typedValue=S.typedValue.slice(0,-1); Audio.play('delete'); updateBigNum(); } }
@@ -816,11 +965,14 @@ const Game = (() => {
 
   function updateBigNum() {
     const el=$('big-number'), txt=$('big-number-text'), hint=$('big-number-hint');
-    if (!S.typedValue) { txt.textContent='?'; el.classList.add('placeholder'); hint.textContent='type a number'; hint.style.opacity='1'; }
+    if (!S.typedValue) { txt.textContent='?'; el.classList.add('placeholder'); if(S.mode==='solo'||S.myTurn) { hint.textContent='type a number'; hint.style.opacity='1'; } }
     else { txt.textContent=S.typedValue; el.classList.remove('placeholder'); hint.textContent='press enter'; hint.style.opacity='0.4'; el.classList.remove('num-slide-in'); void el.offsetWidth; el.classList.add('num-slide-in'); }
   }
 
-  function clearInput() { S.typedValue=''; Audio.play('delete'); updateBigNum(); }
+  function clearInput() {
+    if (S.mode !== 'solo' && !S.myTurn) return;
+    S.typedValue=''; Audio.play('delete'); updateBigNum();
+  }
 
   // ===== GAME =====
   function resetGameUI() {
@@ -828,11 +980,13 @@ const Game = (() => {
     S.myFinalData=null;
     $('att-num').textContent='0'; $('game-timer').textContent='00:00';
     $('guess-history').innerHTML=''; $('hidden-input').value='';
+    $('big-number-area').style.opacity='1';
+    $('submit-row').style.opacity='1'; $('submit-row').style.pointerEvents='auto';
     updateBigNum();
     $('feedback-text').textContent=''; $('feedback-text').className='feedback-text';
     $('feedback-sub').textContent=''; $('feedback-sub').classList.remove('visible');
+    $('turn-badge').classList.add('hidden');
     clearInterval(S.timerInterval);
-    if (S.mode==='solo') $('dual-cards').classList.add('hidden');
   }
 
   function startTimer() {
@@ -843,6 +997,7 @@ const Game = (() => {
   function startSolo() {
     Audio.play('click'); S.mode='solo'; S.target=rand(1,100); S.currentRound=0; S.rounds=1;
     S.roundResults=[]; S.oppRoundResults=[];
+    document.body.classList.remove('multi-active');
     resetGameUI(); show('game-screen'); startTimer();
   }
 
@@ -860,13 +1015,16 @@ const Game = (() => {
   }
 
   function guess() {
+    if (S.mode !== 'solo' && !S.myTurn) return;
+    if (S.mode !== 'solo' && S.iFinished) return;
+
     const val = parseInt(S.typedValue, 10);
     if (isNaN(val)||val<1||val>100) {
       $('game-container').classList.remove('earthquake'); void $('game-container').offsetWidth;
       $('game-container').classList.add('earthquake'); setTimeout(()=>$('game-container').classList.remove('earthquake'),500);
       Audio.play('tick'); return;
     }
-    if (S.gameOver) return;
+    if (S.gameOver && S.mode==='solo') return;
 
     Audio.play('submit');
     S.attempt++; S.guesses.push(val); S.typedValue='';
@@ -876,30 +1034,15 @@ const Game = (() => {
     const diff=Math.abs(val-S.target), fb=$('feedback-text'), sub=$('feedback-sub');
     flashHeat(diff);
 
-    // Update my card in multi
+    const isCorrect = val===S.target;
+    const isHigh = val>S.target;
+
+    // Send guess to opponent in multi
     if (S.mode !== 'solo') {
-      $('pc-me-att').textContent = S.attempt;
-      const chip = document.createElement('div');
-      const isCorrect = val===S.target;
-      const isHigh = val>S.target;
-      const cls = isCorrect ? 'correct' : (isHigh ? 'high' : 'low');
-      chip.className = 'pc-chip ' + cls;
-      chip.textContent = val;
-      $('pc-me-chips').appendChild(chip);
-
-      // Send guess to opponent
       S.conn.send({ type:'GUESS', number:val, attempt:S.attempt, isHigh, correct:isCorrect });
-
-      if (isCorrect) {
-        $('pc-me-status').textContent = 'Found it!';
-        $('pc-me-status').className = 'pc-status correct';
-      } else {
-        $('pc-me-status').textContent = isHigh ? '↓ Too high' : '↑ Too low';
-        $('pc-me-status').className = 'pc-status ' + (isHigh ? 'high' : 'low');
-      }
     }
 
-    if (val === S.target) {
+    if (isCorrect) {
       S.won=true; S.gameOver=true;
       clearInterval(S.timerInterval); S.elapsed=Date.now()-S.startTime;
       const score = calcScore(S.attempt, S.elapsed);
@@ -917,15 +1060,25 @@ const Game = (() => {
       burst(r.left-cr.left+r.width/2, r.top-cr.top+r.height/2, 20, ['#51cf66','#94d82d','#ffd43b','#4dabf7','#cc5de8','#ff6b6b']);
 
       if (S.mode !== 'solo') {
+        S.iFinished = true;
+        S.myTurn = false;
         S.conn.send({ type:'FINISH', payload:S.myFinalData });
         S.roundResults.push(S.myFinalData);
-      }
+        updateTurnUI();
 
-      setTimeout(()=>{ $('big-number').style.color=''; checkShowResult(); }, 1600);
+        // If opponent already finished too, show results after brief delay
+        if (S.oppFinished) {
+          setTimeout(()=>{ $('big-number').style.color=''; checkShowResult(); }, 1600);
+        } else {
+          // Stay on game screen watching opponent
+          setTimeout(()=>{ $('big-number').style.color=''; }, 1600);
+        }
+      } else {
+        setTimeout(()=>{ $('big-number').style.color=''; checkShowResult(); }, 1600);
+      }
       return;
     }
 
-    const isHigh = val > S.target;
     addChip(val, isHigh?'high':'low');
     fb.classList.remove('visible','high','low','correct'); void fb.offsetWidth;
     fb.textContent = isHigh?'Too high':'Too low';
@@ -937,7 +1090,18 @@ const Game = (() => {
     sub.textContent=ht; sub.classList.add('visible');
 
     const bn=$('big-number'); bn.classList.remove('spring'); void bn.offsetWidth; bn.classList.add('spring'); setTimeout(()=>bn.classList.remove('spring'),500);
-    updateBigNum(); $('hidden-input').focus();
+    updateBigNum();
+
+    // Turn-based: pass turn to opponent
+    if (S.mode !== 'solo') {
+      if (!S.oppFinished) {
+        S.myTurn = false;
+        updateTurnUI();
+      }
+      // If opponent already finished, I keep my turn (uninterrupted)
+    }
+
+    if (S.mode==='solo' || S.myTurn) $('hidden-input').focus();
   }
 
   function addChip(val, type) {
@@ -973,15 +1137,14 @@ const Game = (() => {
 
     if (S.oppFinalData) {
       S.oppRoundResults.push(S.oppFinalData);
-      // Check if more rounds
       if (S.currentRound < S.rounds) {
-        // Show round summary briefly, then start next choosing phase
         setTimeout(()=> startChoosing(), 1200);
       } else {
+        document.body.classList.remove('multi-active');
         renderResult();
       }
     } else {
-      show('wait-result-screen');
+      // Stay on game screen watching opponent (don't switch to wait screen)
     }
   }
 
@@ -1035,7 +1198,7 @@ const Game = (() => {
     return ["Your brain runs on dial-up.","404: Skill not found.","That was painful to watch."][rand(0,2)];
   }
 
-  function playAgain() { window.location.search=''; }
+  function playAgain() { document.body.classList.remove('multi-active'); window.location.search=''; }
   function toggleSound() { const m=Audio.toggle(); $('sound-toggle').classList.toggle('muted',m); if(!m) Audio.play('click'); }
 
   document.addEventListener('DOMContentLoaded', init);
