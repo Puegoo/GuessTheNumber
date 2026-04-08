@@ -6,14 +6,24 @@
   inherits: false;
 }
 
+:root {
+  --bg-desktop: #111; /* Ciemne tło zewnętrzne domyślnie */
+}
+
+.light-mode {
+  --bg-desktop: #f0f0f0; /* Jasne tło zewnętrzne tylko po kliknięciu słoneczka */
+}
+
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
 html, body {
-  width: 100%; height: 100%; overflow: hidden;
-  background: #000;
+  width: 100%; height: 100dvh;
+  overflow: hidden;
+  background: var(--bg-desktop);
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   color: #fff;
   -webkit-font-smoothing: antialiased;
+  transition: background 0.4s ease;
 }
 
 body { display: flex; align-items: center; justify-content: center; }
@@ -23,19 +33,25 @@ body { display: flex; align-items: center; justify-content: center; }
   width: 100%; height: 100%; justify-content: center;
 }
 
+/* Wewnętrzna karta zawsze jest czarna */
 .card-base {
   position: relative; width: 100%; height: 100%;
   background: #000; overflow: hidden;
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.08), 0 30px 90px rgba(0,0,0,0.35), 0 10px 35px rgba(0,0,0,0.2);
 }
 
 @media (min-width: 768px) {
-  body { background: #f0f0f0; }
   .card-base {
-    width: 560px; border-radius: 20px; flex-shrink: 0;
-    box-shadow: 0 0 0 1px rgba(0,0,0,0.08), 0 30px 90px rgba(0,0,0,0.35), 0 10px 35px rgba(0,0,0,0.2);
+    width: 560px; height: 440px; border-radius: 20px; flex-shrink: 0;
   }
-  #game-container { height: 440px; }
 }
+
+/* THEME TOGGLE */
+.theme-toggle { position: absolute; bottom: 12px; left: 12px; width: 36px; height: 36px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.1); background: transparent; color: rgba(255,255,255,0.35); display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 50; transition: color 0.2s, border-color 0.2s; }
+.theme-toggle:hover { color: rgba(255,255,255,0.6); border-color: rgba(255,255,255,0.25); }
+.theme-toggle .sun-icon { display: none; }
+.light-mode .theme-toggle .sun-icon { display: block; }
+.light-mode .theme-toggle .moon-icon { display: none; }
 
 /* TABS MODE */
 .mode-tabs { display: flex; gap: 10px; margin: 16px 0; background: rgba(255,255,255,0.05); padding: 4px; border-radius: 40px; }
@@ -55,7 +71,7 @@ body { display: flex; align-items: center; justify-content: center; }
 .join-row { display: flex; align-items: center; gap: 10px; width: 100%; max-width: 280px; margin-bottom: 8px; }
 
 /* HISTORY (PIN MODE) */
-.history-container { width: 100%; height: 80px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding: 4px 10px; border-top: 1px solid rgba(255,255,255,0.05); margin-top: 10px; scrollbar-width: none; }
+.history-container { width: 100%; max-height: 80px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding: 4px 10px; border-top: 1px solid rgba(255,255,255,0.05); margin-top: 10px; scrollbar-width: none; flex-shrink: 1; }
 .history-container::-webkit-scrollbar { display: none; }
 .history-item { 
     display: flex; justify-content: center; gap: 12px; 
@@ -64,14 +80,12 @@ body { display: flex; align-items: center; justify-content: center; }
 }
 .history-item span.correct { color: #51cf66; }
 
-/* Drop Animation for History */
 .drop-anim { animation: dropToHistory 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards; transform-origin: top center; }
 @keyframes dropToHistory {
     0% { transform: translateY(-80px) scale(2.2); opacity: 1; color: #fff; }
     100% { transform: translateY(0) scale(1); opacity: 1; }
 }
 
-/* Spinner Animation */
 @keyframes spin { 100% { transform: rotate(360deg); } }
 .spin-anim { animation: spin 1.2s linear infinite; }
 
@@ -148,7 +162,7 @@ body.multi-active #opp-container { display: block; }
 #intro-screen { justify-content: flex-start; padding-top: 40px; gap: 0; }
 @media (min-width: 768px) { #intro-screen { padding-top: 36px; } }
 .logo-wrap { display: flex; flex-direction: column; align-items: flex-start; }
-.logo-title { font-size: min(86px, 22vw); font-weight: 900; letter-spacing: -0.05em; line-height: 0.85; text-transform: lowercase; padding-bottom: 0.15em; margin-bottom: -0.1em; }
+.logo-title { font-size: min(86px, 22vw); font-weight: 900; letter-spacing: -0.05em; line-height: 0.85; padding-bottom: 0.15em; margin-bottom: -0.1em; }
 .logo-sub { display: flex; align-items: baseline; gap: 6px; padding-left: 2px; }
 .logo-the { font-size: min(20px, 5vw); font-weight: 400; }
 .logo-number { font-size: min(30px, 7.5vw); font-weight: 700; letter-spacing: -0.02em; }
@@ -219,7 +233,7 @@ body.multi-active #opp-container { display: block; }
 .choose-ms { font-size: 0.4em; font-weight: 700; color: rgba(255,255,255,0.35); }
 
 #game-screen { justify-content: flex-start; padding: 20px 24px; cursor: default; user-select: none; }
-.game-header { width: 100%; display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+.game-header { width: 100%; display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; flex-shrink: 0; }
 .game-timer { font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.3); font-variant-numeric: tabular-nums; }
 .turn-badge { display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 10px; border-radius: 26px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; transition: all 0.3s; }
 .turn-badge.my-turn { background: rgba(81,207,102,0.12); color: #51cf66; }
@@ -252,10 +266,12 @@ body.multi-active #opp-container { display: block; }
 .big-number.placeholder { color: rgba(255,255,255,0.12); }
 .cursor-blink { display: inline-block; width: 3px; height: 0.65em; background: rgba(255,255,255,0.5); margin-left: 2px; animation: cursorBlink 1s step-end infinite; }
 @keyframes cursorBlink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
-.hidden-input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+
+.hidden-input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; font-size: 16px; }
+
 .big-number-hint { font-size: 11px; font-weight: 500; color: rgba(255,255,255,0.2); margin-top: 2px; transition: opacity 0.3s; white-space: nowrap; }
 
-.feedback-strip { width: 100%; display: flex; align-items: center; justify-content: center; min-height: 36px; }
+.feedback-strip { width: 100%; display: flex; align-items: center; justify-content: center; min-height: 36px; flex-shrink: 0; }
 .feedback-text { font-size: 14px; font-weight: 700; text-transform: uppercase; opacity: 0; transform: translateY(6px); transition: opacity 0.3s, transform 0.3s; }
 .feedback-text.visible { opacity: 1; transform: translateY(0); }
 .feedback-text.high { color: #ff6b6b; }
@@ -264,7 +280,7 @@ body.multi-active #opp-container { display: block; }
 .feedback-sub { font-size: 11px; color: rgba(255,255,255,0.3); margin-top: 1px; opacity: 0; transition: opacity 0.3s 0.05s; text-align: center; }
 .feedback-sub.visible { opacity: 1; }
 
-.submit-row { display: flex; align-items: center; justify-content: center; gap: 14px; width: 100%; margin: 4px 0; transition: opacity 0.3s; }
+.submit-row { display: flex; align-items: center; justify-content: center; gap: 14px; width: 100%; margin: 4px 0; transition: opacity 0.3s; flex-shrink: 0; }
 
 .heat-flash { position: absolute; inset: 0; pointer-events: none; opacity: 0; z-index: 100; border-radius: inherit; }
 .heat-flash.flash { animation: heatPulse 0.6s ease-out forwards; }
@@ -312,3 +328,19 @@ body.multi-active #opp-container { display: block; }
 
 .hidden { display: none !important; }
 .flex-col { display: flex; flex-direction: column; align-items: center; }
+
+@media (max-height: 600px) {
+    .screen { padding: 16px 12px; }
+    .logo-title { font-size: 48px; }
+    .intro-desc { margin-bottom: 12px; }
+    .big-number { font-size: 42px; }
+    .range-num { font-size: 28px; }
+    .circle-btn { width: 40px; height: 40px; }
+    .circle-btn svg { width: 16px; height: 16px; }
+    .setup-field { margin-bottom: 6px; }
+    .setup-title { font-size: 20px; }
+    .game-input { height: 44px; font-size: 16px; }
+    .pill-btn { height: 44px; font-size: 14px; }
+    .history-item { font-size: 16px; gap: 8px; }
+    .history-container { max-height: 60px; }
+}

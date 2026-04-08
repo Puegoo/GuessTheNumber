@@ -67,8 +67,9 @@ window.Game = (() => {
     myFinalData: null, oppFinalData: null, choosingInterval: null,
     roundResults: [], oppRoundResults: [],
     
-    // Turn-based
+    // Turn-based & Rematch
     myTurn: false, iFinished: false, oppFinished: false,
+    iWantRematch: false, oppWantsRematch: false,
     
     // Opp range
     oppRangeLow: 0, oppRangeHigh: 100
@@ -99,6 +100,19 @@ window.Game = (() => {
     }
   }
 
+  // ===== THEME TOGGLE =====
+  function initTheme() {
+      if (localStorage.getItem('gtn-theme') === 'light') {
+          document.body.classList.add('light-mode');
+      }
+  }
+
+  function toggleTheme() {
+      const isLight = document.body.classList.toggle('light-mode');
+      localStorage.setItem('gtn-theme', isLight ? 'light' : 'dark');
+      SFX.play('click');
+  }
+
   // ===== MODE TOGGLE =====
   function setGameType(type) {
     S.gameType = type;
@@ -111,7 +125,6 @@ window.Game = (() => {
     SFX.play('click');
   }
 
-  // Przełączanie zakładek w lobby Multiplayer
   function setMultiMode(mode) {
     $('tab-create').classList.toggle('active', mode === 'create');
     $('tab-join').classList.toggle('active', mode === 'join');
@@ -220,12 +233,12 @@ window.Game = (() => {
 
   // ===== INIT =====
   function init() {
+    initTheme();
     document.addEventListener('keydown', onKey);
     $('game-screen').addEventListener('click', ()=>{ if(!S.gameOver && (S.mode==='solo'||S.myTurn)) $('hidden-input').focus(); });
     $('player-name').addEventListener('input', updateSetupButtons);
     $('guest-code').addEventListener('input', updateSetupButtons);
     
-    // Quick enter key support for form
     $('guest-code').addEventListener('keydown', e=>{ 
         if(e.key==='Enter' && !$('guest-play-btn').disabled) guestPlay(); 
     });
@@ -242,7 +255,19 @@ window.Game = (() => {
     return new Promise((resolve, reject) => {
       if (S.peer) return resolve(S.peer);
       let peerId = isHost ? 'gtn-' + Math.floor(100000 + Math.random() * 900000) : null;
-      const p = peerId ? new Peer(peerId) : new Peer();
+      
+      const peerConfig = {
+          config: {
+              'iceServers': [
+                  { urls: 'stun:stun.l.google.com:19302' },
+                  { urls: 'stun:stun1.l.google.com:19302' },
+                  { urls: 'stun:stun2.l.google.com:19302' },
+                  { urls: 'stun:stun3.l.google.com:19302' }
+              ]
+          }
+      };
+
+      const p = peerId ? new Peer(peerId, peerConfig) : new Peer(peerConfig);
       p.on('open', ()=>{ S.peer=p; resolve(p); });
       p.on('error', e=>{ alert('Connection error. Try again.'); console.error(e); });
     });
@@ -253,7 +278,7 @@ window.Game = (() => {
       if (d.type==='INIT') { 
           S.oppName=d.name; 
           S.rounds=d.rounds; 
-          S.gameType=d.gameType; // Host enforces rules
+          S.gameType=d.gameType; 
           S.conn.send({type:'INIT_ACK',name:S.playerName}); 
           startChoosing(); 
       }
@@ -264,6 +289,19 @@ window.Game = (() => {
       }
       else if (d.type==='GUESS') { handleOppGuess(d); }
       else if (d.type==='FINISH') { S.oppFinalData=d.payload; S.oppFinished=true; updateTurnUI(); checkShowResult(); }
+      else if (d.type==='REMATCH') {
+          S.oppWantsRematch = true;
+          if (S.iWantRematch) restartMatch();
+      }
+      else if (d.type==='QUIT') {
+          alert('Opponent left the room.');
+          window.location.reload();
+      }
+    });
+    
+    S.conn.on('close', () => {
+        alert('Connection lost.');
+        window.location.reload();
     });
   }
 
@@ -310,7 +348,6 @@ window.Game = (() => {
     SFX.play('click');
     S.mode = 'guest';
     
-    // Add spinner to the button
     $('guest-play-btn').innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="spin-anim"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="4.93" x2="19.07" y2="7.76"/></svg>';
     $('guest-play-btn').disabled = true;
     $('setup-play-btn').disabled = true;
@@ -565,12 +602,11 @@ window.Game = (() => {
     $('create-join-section').classList.remove('hidden');
     $('waiting-section').classList.add('hidden');
     
-    // Restore button appearance from potential previous join attempt
     $('guest-play-btn').innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>';
     $('setup-play-btn').textContent='Create Room';
     
     updateSetupButtons();
-    setMultiMode('create'); // Start on Create tab by default
+    setMultiMode('create'); 
     setRounds(3);
     show('setup-screen');
     setTimeout(()=>$('player-name').focus(),400);
@@ -631,7 +667,6 @@ window.Game = (() => {
             updateBigNum();
             handleWin(guessArr.join(''));
         } else {
-            // Drop to history animation
             const hist = document.createElement('div');
             hist.className = 'history-item drop-anim';
             hist.innerHTML = guessArr.map((c, i) => `<span class="${newKnown[i] !== null ? 'correct' : ''}">${c}</span>`).join('');
@@ -699,7 +734,6 @@ window.Game = (() => {
           $('big-number-text').textContent=val; $('big-number').classList.remove('placeholder');
           $('big-number').style.color='#51cf66'; $('big-number-hint').textContent='';
       } else {
-          // Hide cursor
           $('cursor-blink').style.display = 'none';
           $('big-number-hint').textContent='';
       }
@@ -707,7 +741,6 @@ window.Game = (() => {
       SFX.play('win');
       $('game-container').classList.add('celebrate'); setTimeout(()=>$('game-container').classList.remove('celebrate'),700);
       
-      // Burst effect
       let cx = window.innerWidth/2;
       let cy = window.innerHeight/2;
       burst(cx, cy, 30, ['#51cf66','#94d82d','#ffd43b','#4dabf7','#cc5de8','#ff6b6b']);
@@ -739,7 +772,7 @@ window.Game = (() => {
     return Math.min(1000,a+tb);
   }
 
-  // ===== RESULTS =====
+  // ===== RESULTS & REMATCH =====
   function checkShowResult() {
     if (!S.myFinalData) return;
     if (S.mode==='solo') { renderResult(); return; }
@@ -773,8 +806,10 @@ window.Game = (() => {
     });
 
     const vs=$('vs-card');
-    if (S.mode==='solo') { vs.classList.add('hidden'); }
-    else {
+    if (S.mode==='solo') { 
+        vs.classList.add('hidden'); 
+        $('rematch-btn').textContent = 'Play Again';
+    } else {
       vs.classList.remove('hidden');
       const oppScore = S.oppRoundResults.reduce((s,r)=>s+r.score,0);
       const oppAtt = S.oppRoundResults.reduce((s,r)=>s+r.attempts,0);
@@ -791,6 +826,8 @@ window.Game = (() => {
       if (score>oppScore) { $('vs-p1-score').classList.add('winner'); $('vs-winner').textContent=S.playerName+' wins!'; }
       else if (oppScore>score) { $('vs-p2-score').classList.add('winner'); $('vs-winner').textContent=S.oppName+' wins!'; }
       else $('vs-winner').textContent="It's a tie!";
+      
+      $('rematch-btn').textContent = 'Rematch';
     }
 
     SFX.play('tick');
@@ -806,12 +843,40 @@ window.Game = (() => {
   }
 
   function playAgain() { 
-      window.location.reload(); 
+      if (S.mode === 'solo') {
+          startSolo();
+      } else {
+          SFX.play('click');
+          S.iWantRematch = true;
+          $('rematch-btn').textContent = 'Waiting...';
+          $('rematch-btn').disabled = true;
+          S.conn.send({ type: 'REMATCH' });
+          if (S.oppWantsRematch) restartMatch();
+      }
+  }
+  
+  function restartMatch() {
+      S.currentRound = 0;
+      S.roundResults = [];
+      S.oppRoundResults = [];
+      S.iWantRematch = false;
+      S.oppWantsRematch = false;
+      
+      $('rematch-btn').disabled = false;
+      startChoosing();
+  }
+  
+  function quitToMenu(confirmExit = false) {
+      if (confirmExit) {
+          if (!confirm("Are you sure you want to exit the current game?")) return;
+      }
+      if (S.conn && S.conn.open) S.conn.send({ type: 'QUIT' });
+      window.location.reload();
   }
   
   function toggleSound() { const m=SFX.toggle(); $('sound-toggle').classList.toggle('muted',m); if(!m) SFX.play('click'); }
 
   document.addEventListener('DOMContentLoaded', init);
 
-  return { setGameType, setMultiMode, startSolo, startMulti, setRounds, hostPlay, guestPlay, lockSecret, guess, clearInput, playAgain, toggleSound, show };
+  return { setGameType, setMultiMode, startSolo, startMulti, setRounds, hostPlay, guestPlay, lockSecret, guess, clearInput, playAgain, quitToMenu, toggleTheme, toggleSound, show };
 })();
