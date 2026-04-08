@@ -239,6 +239,7 @@ window.Game = (() => {
     $('player-name').addEventListener('input', updateSetupButtons);
     $('guest-code').addEventListener('input', updateSetupButtons);
     
+    // Quick enter key support for form
     $('guest-code').addEventListener('keydown', e=>{ 
         if(e.key==='Enter' && !$('guest-play-btn').disabled) guestPlay(); 
     });
@@ -256,20 +257,34 @@ window.Game = (() => {
       if (S.peer) return resolve(S.peer);
       let peerId = isHost ? 'gtn-' + Math.floor(100000 + Math.random() * 900000) : null;
       
+      // KONFIGURACJA STUN I TURN (METERED PUBLIC RELAY)
       const peerConfig = {
           config: {
               'iceServers': [
                   { urls: 'stun:stun.l.google.com:19302' },
                   { urls: 'stun:stun1.l.google.com:19302' },
-                  { urls: 'stun:stun2.l.google.com:19302' },
-                  { urls: 'stun:stun3.l.google.com:19302' }
+                  {
+                      urls: 'turn:openrelay.metered.ca:80',
+                      username: 'openrelayproject',
+                      credential: 'openrelayproject'
+                  },
+                  {
+                      urls: 'turn:openrelay.metered.ca:443',
+                      username: 'openrelayproject',
+                      credential: 'openrelayproject'
+                  },
+                  {
+                      urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+                      username: 'openrelayproject',
+                      credential: 'openrelayproject'
+                  }
               ]
           }
       };
 
       const p = peerId ? new Peer(peerId, peerConfig) : new Peer(peerConfig);
       p.on('open', ()=>{ S.peer=p; resolve(p); });
-      p.on('error', e=>{ alert('Connection error. Try again.'); console.error(e); });
+      p.on('error', e=>{ alert('Connection error. Check your network or try again.'); console.error(e); });
     });
   }
 
@@ -278,7 +293,7 @@ window.Game = (() => {
       if (d.type==='INIT') { 
           S.oppName=d.name; 
           S.rounds=d.rounds; 
-          S.gameType=d.gameType; 
+          S.gameType=d.gameType; // Host enforces rules
           S.conn.send({type:'INIT_ACK',name:S.playerName}); 
           startChoosing(); 
       }
