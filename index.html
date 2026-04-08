@@ -1,1347 +1,232 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Guess the Number</title>
-<script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
-
-@property --ring-angle {
-  syntax: '<angle>';
-  initial-value: 0deg;
-  inherits: false;
-}
-
-*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-
-html, body {
-  width: 100%; height: 100%; overflow: hidden;
-  background: #000;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  color: #fff;
-  -webkit-font-smoothing: antialiased;
-}
-
-body { display: flex; align-items: center; justify-content: center; }
-
-#app-wrapper {
-  display: flex; flex-direction: row; align-items: center; gap: 20px;
-  width: 100%; height: 100%; justify-content: center;
-}
-
-.card-base {
-  position: relative; width: 100%; height: 100%;
-  background: #000; overflow: hidden;
-}
-
-@media (min-width: 768px) {
-  body { background: #f0f0f0; }
-  .card-base {
-    width: 560px; border-radius: 20px; flex-shrink: 0;
-    box-shadow: 0 0 0 1px rgba(0,0,0,0.08), 0 30px 90px rgba(0,0,0,0.35), 0 10px 35px rgba(0,0,0,0.2);
-  }
-  #game-container { height: 440px; }
-}
-
-/* --- Opponent Card (multiplayer) --- */
-#opp-container {
-  display: none; background: #000; overflow: hidden;
-}
-body.multi-active #opp-container { display: block; }
-@media (min-width: 768px) {
-  #opp-container { width: 320px; height: 440px; }
-}
-
-.opp-inner {
-  display: flex; flex-direction: column; align-items: center;
-  padding: 24px 28px; height: 100%;
-}
-.opp-header-bar {
-  width: 100%; display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;
-}
-.opp-name-badge {
-  display: flex; align-items: center; gap: 8px;
-}
-.opp-name-label { font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.3); text-transform: uppercase; letter-spacing: 0.06em; }
-.opp-name-val { font-size: 16px; font-weight: 800; letter-spacing: -0.02em; }
-
-.opp-turn-pill {
-  display: inline-flex; align-items: center; gap: 5px;
-  height: 26px; padding: 0 10px; border-radius: 26px;
-  font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;
-  transition: all 0.3s;
-}
-.opp-turn-pill.their-turn { background: rgba(255,200,0,0.1); color: #ffd43b; }
-.opp-turn-pill.your-turn { background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.2); }
-.opp-turn-pill.done { background: rgba(81,207,102,0.1); color: #51cf66; }
-.opp-turn-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
-.opp-turn-pill.their-turn .opp-turn-dot { animation: pulse 0.8s infinite alternate; }
-
-.opp-stats-bar {
-  display: flex; align-items: center; gap: 16px; margin-bottom: 8px;
-}
-.opp-att { display: flex; align-items: baseline; gap: 4px; }
-.opp-att-num { font-size: 20px; font-weight: 800; }
-.opp-att-label { font-size: 11px; font-weight: 500; color: rgba(255,255,255,0.3); text-transform: uppercase; }
-
-/* Opp range display */
-.opp-range {
-  display: flex; align-items: center; justify-content: center; gap: 0; width: 100%;
-  flex: 1; min-height: 80px;
-}
-.opp-range-bound {
-  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
-  min-width: 60px; transition: all 0.3s;
-}
-.opp-range-num {
-  font-size: min(40px, 10vw); font-weight: 900; letter-spacing: -0.04em;
-  color: rgba(255,255,255,0.15); transition: color 0.3s;
-  font-variant-numeric: tabular-nums;
-}
-.opp-range-num.low { color: #4dabf7; }
-.opp-range-num.high { color: #ff6b6b; }
-.opp-range-num.correct { color: #51cf66; }
-.opp-range-arrow {
-  font-size: 10px; font-weight: 600; color: rgba(255,255,255,0.15); text-transform: uppercase;
-  letter-spacing: 0.06em; margin-top: 2px;
-}
-.opp-range-center {
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  padding: 0 16px;
-}
-.opp-range-current {
-  font-size: min(52px, 13vw); font-weight: 900; letter-spacing: -0.05em;
-  transition: color 0.3s;
-}
-.opp-range-current.high { color: #ff6b6b; }
-.opp-range-current.low { color: #4dabf7; }
-.opp-range-current.correct { color: #51cf66; }
-.opp-range-hint {
-  font-size: 11px; font-weight: 600; margin-top: 2px; transition: color 0.3s;
-  color: rgba(255,255,255,0.2);
-}
-.opp-range-hint.high { color: #ff6b6b; }
-.opp-range-hint.low { color: #4dabf7; }
-.opp-range-hint.correct { color: #51cf66; }
-
-.opp-chips-bar {
-  display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; margin-top: 8px;
-  max-height: 60px; overflow-y: auto; scrollbar-width: none;
-}
-.opp-chips-bar::-webkit-scrollbar { display: none; }
-.opp-chip {
-  height: 22px; min-width: 30px; padding: 0 6px; border-radius: 22px;
-  font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center;
-  font-variant-numeric: tabular-nums;
-}
-.opp-chip.high { background: rgba(255,107,107,0.08); color: rgba(255,107,107,0.5); }
-.opp-chip.low { background: rgba(77,171,247,0.08); color: rgba(77,171,247,0.5); }
-.opp-chip.correct { background: rgba(81,207,102,0.1); color: #51cf66; }
-
-/* Mobile opponent card */
-@media (max-width: 767px) {
-  #app-wrapper { flex-direction: column; gap: 0; }
-  body.multi-active #opp-container {
-    position: fixed; top: 0; right: 0; z-index: 200;
-    width: 160px; height: auto; max-height: 55vh;
-    border-radius: 0 0 0 16px; padding: 0;
-    box-shadow: -4px 4px 20px rgba(0,0,0,0.5);
-    border-left: 1px solid rgba(255,255,255,0.06);
-    border-bottom: 1px solid rgba(255,255,255,0.06);
-  }
-  body.multi-active #opp-container .opp-inner { padding: 12px 10px; }
-  body.multi-active #opp-container .opp-name-val { font-size: 14px; }
-  body.multi-active #opp-container .opp-att-num { font-size: 18px; }
-  body.multi-active #opp-container .opp-range-num { font-size: 24px; }
-  body.multi-active #opp-container .opp-range-current { font-size: 28px; }
-  body.multi-active #opp-container .opp-stats-bar { margin-bottom: 4px; }
-  body.multi-active #opp-container .opp-turn-pill { height: 22px; padding: 0 8px; font-size: 9px; margin-bottom: 8px; }
-}
-
-/* --- Screens --- */
-.screen {
-  position: absolute; inset: 0;
-  display: flex; flex-direction: column; align-items: center;
-  padding: 36px 28px;
-  opacity: 0; pointer-events: none;
-  transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-  z-index: 1;
-}
-.screen.active { opacity: 1; pointer-events: all; z-index: 10; }
-
-/* --- Shimmer --- */
-@keyframes shimmer { 0% { background-position: -200% center; } 100% { background-position: 200% center; } }
-.shimmer-text {
-  background: linear-gradient(90deg, rgba(255,255,255,0.3) 0%, rgba(255,255,255,1) 35%, rgba(255,255,255,1) 65%, rgba(255,255,255,0.3) 100%);
-  background-size: 200% 100%;
-  -webkit-background-clip: text; background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: shimmer 4s ease-in-out infinite;
-}
-
-@keyframes ringSpin { 0% { --ring-angle: 0deg; } 100% { --ring-angle: 360deg; } }
-
-/* === INTRO === */
-#intro-screen { justify-content: flex-start; padding-top: 40px; gap: 0; }
-@media (min-width: 768px) { #intro-screen { padding-top: 36px; } }
-
-.logo-wrap { display: flex; flex-direction: column; align-items: flex-start; }
-.logo-title {
-  font-size: min(86px, 22vw); font-weight: 900;
-  letter-spacing: -0.05em; line-height: 0.85; text-transform: lowercase;
-  padding-bottom: 0.15em; margin-bottom: -0.1em;
-}
-.logo-sub { display: flex; align-items: baseline; gap: 6px; padding-left: 2px; }
-.logo-the { font-size: min(20px, 5vw); font-weight: 400; }
-.logo-number { font-size: min(30px, 7.5vw); font-weight: 700; letter-spacing: -0.02em; }
-
-.intro-bottom { margin-top: auto; display: flex; flex-direction: column; align-items: center; width: 100%; }
-.intro-desc { font-size: 14px; color: rgba(255,255,255,0.45); line-height: 1.55; max-width: 300px; text-align: center; margin-bottom: 12px; }
-.intro-question { font-size: 14px; font-weight: 600; color: rgba(255,255,255,0.85); margin-bottom: 20px; }
-
-.mode-icons { display: flex; gap: 16px; }
-.mode-col { display: flex; flex-direction: column; align-items: center; }
-.mode-label { font-size: 11px; font-weight: 500; color: rgba(255,255,255,0.3); margin-top: 6px; }
-
-.mode-icon-btn {
-  position: relative; width: 60px; height: 60px; border-radius: 50%;
-  border: none; background: #fff; color: #000;
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer; z-index: 1; overflow: visible;
-  transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.3s;
-}
-.mode-icon-btn:hover { transform: scale(1.08); }
-.mode-icon-btn:active { transform: scale(0.94); }
-.mode-icon-btn svg { width: 26px; height: 26px; }
-
-.mode-icon-btn.ring-btn { background: #000; color: #fff; isolation: isolate; }
-.mode-icon-btn.ring-btn::before {
-  content: ''; position: absolute; inset: -3px; border-radius: 50%;
-  background: conic-gradient(from var(--ring-angle), #ff0040,#ff8000,#ffe600,#00ff88,#00ccff,#8000ff,#ff0080,#ff0040);
-  z-index: -1; animation: ringSpin 3s linear infinite;
-  transition: inset 0.3s, filter 0.3s;
-}
-.mode-icon-btn.ring-btn::after { content: ''; position: absolute; inset: 2px; border-radius: 50%; background: #000; z-index: -1; }
-.mode-icon-btn.ring-btn:hover::before { inset: -6px; filter: blur(8px); }
-.mode-icon-btn.ring-btn:hover { box-shadow: 0 0 28px 6px rgba(255,0,128,0.25), 0 0 28px 6px rgba(0,200,255,0.2); }
-
-.watermark { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); font-size: 11px; font-weight: 500; color: rgba(255,255,255,0.1); }
-
-/* === SHARED === */
-.game-input {
-  width: 100%; max-width: 280px; height: 52px; border-radius: 52px;
-  border: 2px solid rgba(255,255,255,0.15); background: transparent;
-  color: #fff; font-family: inherit; font-size: 18px; font-weight: 500;
-  text-align: center; outline: none; transition: border-color 0.3s;
-  -moz-appearance: textfield;
-}
-.game-input::-webkit-outer-spin-button, .game-input::-webkit-inner-spin-button { -webkit-appearance: none; }
-.game-input:focus { border-color: rgba(255,255,255,0.5); }
-.game-input:disabled { opacity: 0.4; cursor: not-allowed; }
-.game-input::placeholder { color: rgba(255,255,255,0.25); font-weight: 400; }
-
-.pill-btn {
-  position: relative; display: flex; align-items: center; justify-content: center;
-  height: 52px; border-radius: 52px; border: none;
-  background: #fff; color: #000; font-family: inherit;
-  font-size: 15px; font-weight: 600; cursor: pointer;
-  transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1), opacity 0.2s;
-}
-.pill-btn:active { transform: scale(0.96); }
-.pill-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-
-.back-btn {
-  position: absolute; top: 16px; left: 16px; width: 40px; height: 40px;
-  border-radius: 50%; border: 1px solid rgba(255,255,255,0.1);
-  background: transparent; color: #fff;
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer; z-index: 20; transition: border-color 0.2s;
-}
-.back-btn:hover { border-color: rgba(255,255,255,0.3); }
-.back-btn svg { width: 18px; height: 18px; }
-
-.sound-toggle {
-  position: absolute; bottom: 12px; right: 12px; width: 36px; height: 36px;
-  border-radius: 50%; border: 1px solid rgba(255,255,255,0.1);
-  background: transparent; color: rgba(255,255,255,0.35);
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer; z-index: 50; transition: color 0.2s, border-color 0.2s;
-}
-.sound-toggle:hover { color: rgba(255,255,255,0.6); border-color: rgba(255,255,255,0.25); }
-.sound-toggle.muted svg:first-child { display: none; }
-.sound-toggle.muted svg:last-child { display: block; }
-.sound-toggle:not(.muted) svg:first-child { display: block; }
-.sound-toggle:not(.muted) svg:last-child { display: none; }
-
-/* === SETUP === */
-#setup-screen { justify-content: center; }
-.setup-title { font-size: 26px; font-weight: 700; letter-spacing: -0.03em; margin-bottom: 6px; }
-.setup-desc { font-size: 13px; color: rgba(255,255,255,0.4); margin-bottom: 24px; text-align: center; line-height: 1.5; }
-.setup-field { width: 100%; max-width: 280px; margin-bottom: 14px; }
-.setup-field label {
-  display: block; font-size: 11px; font-weight: 500; color: rgba(255,255,255,0.35);
-  text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; padding-left: 18px;
-}
-
-/* Round selector */
-.round-selector { display: flex; gap: 10px; margin-bottom: 20px; }
-.round-pill {
-  width: 52px; height: 38px; border-radius: 38px;
-  border: 2px solid rgba(255,255,255,0.12); background: transparent;
-  color: rgba(255,255,255,0.4); font-family: inherit; font-size: 15px; font-weight: 600;
-  cursor: pointer; transition: all 0.25s;
-}
-.round-pill.active { border-color: #fff; color: #fff; background: rgba(255,255,255,0.08); }
-.round-pill:hover:not(.active) { border-color: rgba(255,255,255,0.3); color: rgba(255,255,255,0.7); }
-
-.link-box { display: flex; gap: 10px; width: 100%; max-width: 280px; margin-bottom: 16px; }
-.link-display {
-  flex: 1; height: 44px; border-radius: 44px;
-  border: 2px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.04);
-  color: rgba(255,255,255,0.5); font-family: inherit; font-size: 11px;
-  text-align: center; line-height: 40px; overflow: hidden; text-overflow: ellipsis;
-  white-space: nowrap; padding: 0 14px; user-select: all;
-}
-.copy-btn {
-  height: 44px; padding: 0 16px; border-radius: 44px; border: none;
-  background: rgba(255,255,255,0.1); color: #fff; font-family: inherit;
-  font-size: 13px; font-weight: 600; cursor: pointer; transition: background 0.2s;
-}
-.copy-btn:hover { background: rgba(255,255,255,0.18); }
-.copy-btn.copied { background: rgba(0,255,136,0.15); color: #00ff88; }
-
-.host-wait { margin-top: 16px; font-size: 13px; font-weight: 500; color: #51cf66; display: none; animation: pulse 1.5s infinite alternate; }
-@keyframes pulse { from { opacity: 0.4; } to { opacity: 1; } }
-
-/* === CHALLENGE INTRO === */
-.challenge-badge {
-  display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px;
-  border-radius: 30px; background: rgba(255,255,255,0.06);
-  color: rgba(255,255,255,0.5); font-size: 11px; font-weight: 500;
-  text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 16px;
-}
-.challenge-title { font-size: 28px; font-weight: 800; letter-spacing: -0.03em; text-align: center; margin-bottom: 6px; }
-.challenge-name { font-size: 16px; color: rgba(255,255,255,0.5); margin-bottom: 24px; }
-#challenge-intro-screen { justify-content: center; }
-
-/* === CHOOSE SECRET === */
-#choose-screen { justify-content: center; }
-.choose-timer { font-size: min(72px, 18vw); font-weight: 900; letter-spacing: -0.04em; margin: 12px 0; font-variant-numeric: tabular-nums; }
-.choose-ms { font-size: 0.4em; font-weight: 700; color: rgba(255,255,255,0.35); }
-
-/* === GAME SCREEN === */
-#game-screen { justify-content: flex-start; padding: 20px 24px; cursor: default; user-select: none; }
-
-.game-header {
-  width: 100%; display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;
-}
-.game-timer { font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.3); font-variant-numeric: tabular-nums; }
-
-/* Turn badge */
-.turn-badge {
-  display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 10px;
-  border-radius: 26px; font-size: 10px; font-weight: 600; text-transform: uppercase;
-  letter-spacing: 0.04em; transition: all 0.3s;
-}
-.turn-badge.my-turn { background: rgba(81,207,102,0.12); color: #51cf66; }
-.turn-badge.opp-turn { background: rgba(255,200,0,0.1); color: #ffd43b; }
-.turn-badge .turn-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
-.turn-badge.my-turn .turn-dot { animation: pulse 0.8s infinite alternate; }
-
-/* Round badge */
-.round-badge {
-  display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 10px;
-  border-radius: 24px; background: rgba(255,255,255,0.06);
-  font-size: 10px; font-weight: 600; color: rgba(255,255,255,0.4);
-  text-transform: uppercase; letter-spacing: 0.04em;
-}
-
-/* Attempts counter */
-.att-counter { display: flex; align-items: baseline; gap: 4px; }
-.att-num { font-size: 22px; font-weight: 800; letter-spacing: -0.03em; }
-.att-label { font-size: 11px; font-weight: 500; color: rgba(255,255,255,0.3); text-transform: uppercase; }
-@keyframes attBump { 0% { transform: scale(1); } 40% { transform: scale(1.3); } 100% { transform: scale(1); } }
-.att-num.bump { animation: attBump 0.35s cubic-bezier(0.34,1.56,0.64,1); }
-
-/* === RANGE DISPLAY === */
-.range-display {
-  display: flex; align-items: center; justify-content: center;
-  width: 100%; flex: 1; min-height: 0;
-}
-.range-bound {
-  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
-  transition: all 0.4s cubic-bezier(0.34,1.56,0.64,1);
-}
-.range-num {
-  font-size: min(48px, 12vw); font-weight: 900; letter-spacing: -0.04em;
-  color: rgba(255,255,255,0.12); font-variant-numeric: tabular-nums;
-  transition: color 0.3s, transform 0.3s;
-}
-.range-num.active { color: rgba(255,255,255,0.25); }
-.range-num.low { color: #4dabf7; }
-.range-num.high { color: #ff6b6b; }
-.range-arrow {
-  font-size: 9px; font-weight: 600; color: rgba(255,255,255,0.1); text-transform: uppercase;
-  letter-spacing: 0.08em; margin-top: 2px; transition: color 0.3s;
-}
-.range-arrow.low { color: rgba(77,171,247,0.4); }
-.range-arrow.high { color: rgba(255,107,107,0.4); }
-
-@keyframes boundUpdate {
-  0% { transform: scale(1); } 30% { transform: scale(1.15); } 100% { transform: scale(1); }
-}
-.range-num.updated { animation: boundUpdate 0.4s cubic-bezier(0.34,1.56,0.64,1); }
-
-.range-center {
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  padding: 0 8px; position: relative; min-width: 120px;
-}
-.big-number {
-  font-size: min(72px, 18vw); font-weight: 900; letter-spacing: -0.05em; line-height: 1;
-  color: #fff; transition: color 0.3s; min-height: 1.1em;
-  display: flex; align-items: center; justify-content: center;
-}
-.big-number.placeholder { color: rgba(255,255,255,0.12); }
-.big-number .cursor-blink {
-  display: inline-block; width: 3px; height: 0.65em; background: rgba(255,255,255,0.5);
-  margin-left: 2px; animation: cursorBlink 1s step-end infinite;
-}
-@keyframes cursorBlink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
-.hidden-input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
-.big-number-hint {
-  font-size: 11px; font-weight: 500; color: rgba(255,255,255,0.2);
-  margin-top: 2px; transition: opacity 0.3s; white-space: nowrap;
-}
-
-/* Feedback */
-.feedback-strip { width: 100%; display: flex; align-items: center; justify-content: center; min-height: 36px; }
-.feedback-text {
-  font-size: 14px; font-weight: 700; text-transform: uppercase;
-  opacity: 0; transform: translateY(6px); transition: opacity 0.3s, transform 0.3s;
-}
-.feedback-text.visible { opacity: 1; transform: translateY(0); }
-.feedback-text.high { color: #ff6b6b; }
-.feedback-text.low { color: #4dabf7; }
-.feedback-text.correct { color: #51cf66; }
-.feedback-sub {
-  font-size: 11px; color: rgba(255,255,255,0.3); margin-top: 1px;
-  opacity: 0; transition: opacity 0.3s 0.05s; text-align: center;
-}
-.feedback-sub.visible { opacity: 1; }
-
-/* Submit */
-.submit-row { display: flex; align-items: center; justify-content: center; gap: 14px; width: 100%; margin: 4px 0; transition: opacity 0.3s; }
-.circle-btn {
-  width: 48px; height: 48px; border-radius: 50%; border: none;
-  background: #fff; color: #000; display: flex; align-items: center; justify-content: center;
-  cursor: pointer; transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1); flex-shrink: 0;
-}
-.circle-btn:active { transform: scale(0.9); }
-.circle-btn:hover { transform: scale(1.06); }
-.circle-btn svg { width: 20px; height: 20px; }
-.circle-btn.small { width: 36px; height: 36px; background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.5); }
-.circle-btn.small svg { width: 16px; height: 16px; }
-
-/* Overlays */
-.heat-flash { position: absolute; inset: 0; pointer-events: none; opacity: 0; z-index: 100; border-radius: inherit; }
-.heat-flash.flash { animation: heatPulse 0.6s ease-out forwards; }
-@keyframes heatPulse { 0% { opacity: 0.7; } 100% { opacity: 0; } }
-
-.particle-container { position: absolute; inset: 0; pointer-events: none; z-index: 99; overflow: hidden; border-radius: inherit; }
-.particle { position: absolute; width: 6px; height: 6px; border-radius: 50%; animation: particleFly 1s ease-out forwards; }
-@keyframes particleFly { 0% { opacity: 1; transform: translate(0,0) scale(1); } 100% { opacity: 0; transform: translate(var(--px),var(--py)) scale(0); } }
-
-@keyframes earthquake {
-  0%,100% { transform: translate(0,0) rotate(0); }
-  10% { transform: translate(-4px,-2px) rotate(-0.5deg); } 20% { transform: translate(4px,2px) rotate(0.5deg); }
-  30% { transform: translate(-3px,3px) rotate(-0.3deg); } 40% { transform: translate(3px,-3px) rotate(0.3deg); }
-  50% { transform: translate(-2px,1px) rotate(-0.2deg); } 60% { transform: translate(2px,-1px) rotate(0.2deg); }
-}
-.earthquake { animation: earthquake 0.5s ease-out; }
-
-@keyframes springBounce { 0% { transform: scale(1); } 20% { transform: scale(0.92); } 50% { transform: scale(1.05); } 70% { transform: scale(0.98); } 100% { transform: scale(1); } }
-.spring { animation: springBounce 0.5s ease-out; }
-
-@keyframes numSlideIn { 0% { transform: translateY(16px); filter: blur(3px); opacity: 0; } 100% { transform: translateY(0); filter: blur(0); opacity: 1; } }
-.num-slide-in { animation: numSlideIn 0.2s cubic-bezier(0.16,1,0.3,1) forwards; }
-
-@keyframes celebrate { 0% { transform: scale(1); } 15% { transform: scale(1.12); } 30% { transform: scale(0.96); } 45% { transform: scale(1.06); } 60% { transform: scale(0.98); } 100% { transform: scale(1); } }
-.celebrate { animation: celebrate 0.7s ease-out; }
-
-/* === WAIT SCREEN === */
-#wait-result-screen { justify-content: center; }
-
-/* === RESULT === */
-#result-screen { justify-content: center; gap: 4px; overflow-y: auto; }
-.result-score-wrap { margin-bottom: 6px; }
-.result-score { font-size: min(72px, 18vw); font-weight: 900; letter-spacing: -0.05em; line-height: 1; }
-.result-max { font-size: min(22px, 5.5vw); font-weight: 400; color: rgba(255,255,255,0.25); }
-.result-stats { display: flex; gap: 24px; margin: 10px 0 12px; }
-.result-stat { display: flex; flex-direction: column; align-items: center; gap: 2px; }
-.result-stat-val { font-size: 20px; font-weight: 700; }
-.result-stat-label { font-size: 10px; font-weight: 500; color: rgba(255,255,255,0.3); text-transform: uppercase; letter-spacing: 0.06em; }
-.result-comment { font-size: 14px; color: rgba(255,255,255,0.4); text-align: center; max-width: 280px; line-height: 1.5; margin-bottom: 14px; font-style: italic; }
-
-@keyframes scoreReveal { 0% { opacity: 0; transform: translateY(24px) scale(0.8); filter: blur(8px); } 100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); } }
-.score-reveal { animation: scoreReveal 0.7s cubic-bezier(0.16,1,0.3,1) forwards; }
-@keyframes staggerIn { 0% { opacity: 0; transform: translateY(12px); } 100% { opacity: 1; transform: translateY(0); } }
-.stagger-in { opacity: 0; animation: staggerIn 0.4s cubic-bezier(0.16,1,0.3,1) forwards; }
-
-/* VS Card */
-.vs-card { width: 100%; max-width: 300px; border-radius: 14px; background: rgba(255,255,255,0.04); padding: 14px; margin-bottom: 14px; }
-.vs-title { font-size: 10px; font-weight: 600; color: rgba(255,255,255,0.3); text-transform: uppercase; letter-spacing: 0.08em; text-align: center; margin-bottom: 10px; }
-.vs-row { display: flex; align-items: center; justify-content: space-between; padding: 5px 0; }
-.vs-row + .vs-row { border-top: 1px solid rgba(255,255,255,0.06); }
-.vs-player { display: flex; flex-direction: column; align-items: center; gap: 2px; flex: 1; }
-.vs-player-name { font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.6); max-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.vs-player-val { font-size: 18px; font-weight: 800; }
-.vs-player-val.winner { color: #51cf66; }
-.vs-label { font-size: 10px; font-weight: 500; color: rgba(255,255,255,0.2); text-transform: uppercase; letter-spacing: 0.06em; width: 56px; text-align: center; }
-.vs-winner-banner { text-align: center; margin-top: 8px; font-size: 14px; font-weight: 700; color: #51cf66; }
-
-.hidden { display: none !important; }
-.flex-col { display: flex; flex-direction: column; align-items: center; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Guess the Number / PIN</title>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div id="app-wrapper">
-<div id="game-container" class="card-base">
-  <div class="heat-flash" id="heat-flash"></div>
-  <div class="particle-container" id="particles"></div>
+    <div id="app-wrapper">
+        <div id="game-container" class="card-base">
+            <div class="heat-flash" id="heat-flash"></div>
+            <div class="particle-container" id="particles"></div>
 
-  <button class="sound-toggle" id="sound-toggle" onclick="Game.toggleSound()">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
-  </button>
+            <button class="sound-toggle" id="sound-toggle" onclick="Game.toggleSound()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
+            </button>
 
-  <!-- INTRO -->
-  <section class="screen active" id="intro-screen">
-    <div class="logo-wrap">
-      <h1 class="logo-title shimmer-text">guess</h1>
-      <div class="logo-sub shimmer-text">
-        <span class="logo-the">the</span>
-        <span class="logo-number">Number</span>
-      </div>
-    </div>
-    <div class="intro-bottom">
-      <p class="intro-desc">Find the hidden number between 1 and 100.<br>Fewer attempts = higher score.</p>
-      <p class="intro-question">Solo or multiplayer?</p>
-      <div class="mode-icons">
-        <div class="mode-col">
-          <button class="mode-icon-btn" onclick="Game.startSolo()">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-          </button>
-          <span class="mode-label">Solo</span>
+            <section class="screen active" id="intro-screen">
+                <div class="logo-wrap">
+                    <h1 class="logo-title shimmer-text">guess</h1>
+                    <div class="logo-sub shimmer-text">
+                        <span class="logo-the">the</span>
+                        <span class="logo-number" id="logo-mode-text">Number</span>
+                    </div>
+                </div>
+                
+                <div class="mode-tabs">
+                    <button class="tab-btn active" id="tab-classic" onclick="Game.setGameType('classic')">Klasyczny (0-100)</button>
+                    <button class="tab-btn" id="tab-digits" onclick="Game.setGameType('digits')">Kod PIN (4 cyfry)</button>
+                </div>
+
+                <div class="intro-bottom">
+                    <p class="intro-desc" id="intro-desc-text">Znajdź ukrytą liczbę od 0 do 100.<br>Mniej prób = wyższy wynik.</p>
+                    <div class="mode-icons">
+                        <div class="mode-col">
+                            <button class="mode-icon-btn" onclick="Game.startSolo()">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                            </button>
+                            <span class="mode-label">Solo</span>
+                        </div>
+                        <div class="mode-col">
+                            <button class="mode-icon-btn ring-btn" onclick="Game.startMulti()">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                            </button>
+                            <span class="mode-label">Challenge</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="screen" id="setup-screen">
+                <button class="back-btn" onclick="Game.playAgain()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+                <h2 class="setup-title">Utwórz grę</h2>
+                <div class="setup-field">
+                    <label>Twój nick</label>
+                    <input type="text" class="game-input" id="host-name" placeholder="Nick" maxlength="16" autocomplete="off">
+                </div>
+                <div class="setup-field">
+                    <label>Rundy</label>
+                    <div class="round-selector" id="round-selector">
+                        <button class="round-pill" data-rounds="1" onclick="Game.setRounds(1)">1</button>
+                        <button class="round-pill active" data-rounds="3" onclick="Game.setRounds(3)">3</button>
+                        <button class="round-pill" data-rounds="5" onclick="Game.setRounds(5)">5</button>
+                    </div>
+                </div>
+                
+                <div id="room-code-box" class="hidden flex-col" style="margin-bottom:16px;">
+                    <label style="font-size:11px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.05em;">Kod pokoju dla znajomego:</label>
+                    <div class="room-code-display" id="room-code-display">------</div>
+                </div>
+
+                <button class="pill-btn" id="setup-play-btn" style="max-width:280px;width:100%" disabled onclick="Game.hostPlay()">Utwórz pokój</button>
+                <p class="host-wait" id="host-wait-msg">Oczekiwanie na gracza...</p>
+            </section>
+
+            <section class="screen" id="challenge-intro-screen">
+                <button class="back-btn" onclick="Game.playAgain()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+                <span class="challenge-badge">Dołącz do gry</span>
+                <div class="setup-field" style="margin-top: 10px;">
+                    <label>Twój nick</label>
+                    <input type="text" class="game-input" id="guest-name" placeholder="Nick" maxlength="16" autocomplete="off">
+                </div>
+                <div class="setup-field">
+                    <label>6-cyfrowy kod pokoju</label>
+                    <input type="text" class="game-input" id="guest-code" placeholder="Np. 123456" maxlength="6" autocomplete="off">
+                </div>
+                <button class="pill-btn" id="guest-play-btn" style="max-width:280px;width:100%;margin-top:12px" onclick="Game.guestPlay()">Połącz</button>
+            </section>
+
+            <section class="screen" id="choose-screen">
+                <h2 class="setup-title">Wybierz sekret</h2>
+                <p class="setup-desc" id="choose-status">Wybierz, co twój przeciwnik będzie zgadywał.</p>
+                <div class="choose-timer" id="choose-timer"><span id="choose-sec">15</span><span class="choose-ms" id="choose-ms">.000</span></div>
+                <div class="setup-field" style="margin-top:16px">
+                    <input type="number" class="game-input" id="secret-input" placeholder="0 - 100" autocomplete="off">
+                </div>
+                <button class="pill-btn" id="lock-btn" style="max-width:280px;width:100%" onclick="Game.lockSecret()">Zatwierdź</button>
+            </section>
+
+            <section class="screen" id="game-screen">
+                <div class="game-header">
+                    <div class="att-counter">
+                        <span class="att-num" id="att-num">0</span>
+                        <span class="att-label">prób</span>
+                    </div>
+                    <span class="turn-badge hidden" id="turn-badge"><span class="turn-dot"></span> <span id="turn-text">Twój ruch</span></span>
+                    <span class="round-badge hidden" id="round-badge">Runda 1/3</span>
+                    <span class="game-timer" id="game-timer">00:00</span>
+                </div>
+
+                <div class="range-display" id="classic-display">
+                    <div class="range-bound">
+                        <span class="range-num" id="range-low">0</span>
+                        <span class="range-arrow" id="range-low-arrow">low</span>
+                    </div>
+                    <div class="range-center" id="range-center">
+                        <div class="big-number placeholder" id="big-number">
+                            <span id="big-number-text">?</span><span class="cursor-blink"></span>
+                        </div>
+                        <div class="big-number-hint" id="big-number-hint">wpisz liczbę</div>
+                    </div>
+                    <div class="range-bound">
+                        <span class="range-num" id="range-high">100</span>
+                        <span class="range-arrow" id="range-high-arrow">high</span>
+                    </div>
+                </div>
+
+                <div class="pin-display hidden" id="digits-display">
+                    <div class="pin-box" id="pin-0">_</div>
+                    <div class="pin-box" id="pin-1">_</div>
+                    <div class="pin-box" id="pin-2">_</div>
+                    <div class="pin-box" id="pin-3">_</div>
+                </div>
+
+                <input class="hidden-input" id="hidden-input" type="text" inputmode="numeric" autocomplete="off">
+
+                <div class="feedback-strip">
+                    <div style="text-align:center">
+                        <div class="feedback-text" id="feedback-text"></div>
+                        <div class="feedback-sub" id="feedback-sub"></div>
+                    </div>
+                </div>
+
+                <div class="submit-row" id="submit-row">
+                    <button class="circle-btn small" onclick="Game.clearInput()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                    <button class="circle-btn" onclick="Game.guess()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    </button>
+                </div>
+
+                <div class="history-container hidden" id="history-container">
+                    </div>
+            </section>
+
+            <section class="screen" id="wait-result-screen">
+                <h2 class="setup-title" style="color:#51cf66">Udało się!</h2>
+                <p class="setup-desc">Czekam aż przeciwnik skończy...</p>
+                <div class="mode-icon-btn ring-btn" style="margin-top:24px;pointer-events:none"></div>
+            </section>
+
+            <section class="screen" id="result-screen">
+                <div class="result-score-wrap flex-col">
+                    <span class="result-score score-reveal" id="result-score">0</span>
+                    <span class="result-max">/ 1000</span>
+                </div>
+                <div class="result-stats stagger-in" style="animation-delay:0.25s">
+                    <div class="result-stat"><span class="result-stat-val" id="result-attempts">-</span><span class="result-stat-label">Próby</span></div>
+                    <div class="result-stat"><span class="result-stat-val" id="result-time">-</span><span class="result-stat-label">Czas</span></div>
+                    <div class="result-stat"><span class="result-stat-val" id="result-number">-</span><span class="result-stat-label">Cel</span></div>
+                </div>
+                <p class="result-comment stagger-in" style="animation-delay:0.4s" id="result-comment"></p>
+                <div class="vs-card hidden" id="vs-card">
+                    <div class="vs-title" id="vs-title">Wynik Zmagań</div>
+                    <div class="vs-row">
+                        <div class="vs-player"><span class="vs-player-name" id="vs-p1-name">-</span><span class="vs-player-val" id="vs-p1-score">0</span></div>
+                        <span class="vs-label">Wynik</span>
+                        <div class="vs-player"><span class="vs-player-name" id="vs-p2-name">-</span><span class="vs-player-val" id="vs-p2-score">0</span></div>
+                    </div>
+                    <div class="vs-row">
+                        <div class="vs-player"><span class="vs-player-val" id="vs-p1-att">-</span></div>
+                        <span class="vs-label">Próby</span>
+                        <div class="vs-player"><span class="vs-player-val" id="vs-p2-att">-</span></div>
+                    </div>
+                    <div class="vs-winner-banner" id="vs-winner"></div>
+                </div>
+                <button class="pill-btn stagger-in" style="max-width:260px;width:100%;animation-delay:0.55s" onclick="Game.playAgain()">Zagraj ponownie</button>
+            </section>
         </div>
-        <div class="mode-col">
-          <button class="mode-icon-btn ring-btn" onclick="Game.startMulti()">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-          </button>
-          <span class="mode-label">Challenge</span>
+
+        <div id="opp-container" class="card-base">
+            <div class="opp-inner">
+                <div class="opp-header-bar">
+                    <div class="opp-name-badge">
+                        <span class="opp-name-label">Przeciwnik</span>
+                        <span class="opp-name-val" id="opp-card-name">—</span>
+                    </div>
+                    <div class="opp-turn-pill your-turn" id="opp-turn-pill">
+                        <span class="opp-turn-dot"></span>
+                        <span id="opp-turn-text">Czeka</span>
+                    </div>
+                    <div class="opp-att">
+                        <span class="opp-att-num" id="opp-card-att">0</span>
+                        <span class="opp-att-label"> prób</span>
+                    </div>
+                </div>
+                <div class="opp-range">
+                    <div class="opp-range-bound">
+                        <span class="opp-range-num" id="opp-range-low">0</span>
+                        <span class="opp-range-arrow" id="opp-arrow-l">low</span>
+                    </div>
+                    <div class="opp-range-center">
+                        <span class="opp-range-current" id="opp-range-current">—</span>
+                        <span class="opp-range-hint" id="opp-range-hint"></span>
+                    </div>
+                    <div class="opp-range-bound">
+                        <span class="opp-range-num" id="opp-range-high">100</span>
+                        <span class="opp-range-arrow" id="opp-arrow-h">high</span>
+                    </div>
+                </div>
+                <div class="opp-chips-bar" id="opp-card-chips"></div>
+            </div>
         </div>
-      </div>
-    </div>
-    <span class="watermark">1 – 100</span>
-  </section>
-
-  <!-- SETUP -->
-  <section class="screen" id="setup-screen">
-    <button class="back-btn" onclick="Game.playAgain()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
-    <h2 class="setup-title">Challenge</h2>
-    <p class="setup-desc">Enter your name, pick rounds, share the link.</p>
-    <div class="setup-field">
-      <label>Your name</label>
-      <input type="text" class="game-input" id="host-name" placeholder="Name" maxlength="16" autocomplete="off">
-    </div>
-    <div class="setup-field">
-      <label>Rounds</label>
-      <div class="round-selector" id="round-selector">
-        <button class="round-pill" data-rounds="1" onclick="Game.setRounds(1)">1</button>
-        <button class="round-pill active" data-rounds="3" onclick="Game.setRounds(3)">3</button>
-        <button class="round-pill" data-rounds="5" onclick="Game.setRounds(5)">5</button>
-      </div>
-    </div>
-    <div class="link-box hidden" id="link-box">
-      <span class="link-display" id="link-display"></span>
-      <button class="copy-btn" id="copy-btn" onclick="Game.copyLink()">Copy</button>
-    </div>
-    <button class="pill-btn" id="setup-play-btn" style="max-width:280px;width:100%" disabled onclick="Game.hostPlay()">Create Challenge</button>
-    <p class="host-wait" id="host-wait-msg">Waiting for opponent...</p>
-  </section>
-
-  <!-- CHALLENGE INTRO -->
-  <section class="screen" id="challenge-intro-screen">
-    <span class="challenge-badge">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
-      Challenge
-    </span>
-    <h2 class="challenge-title">Ready to play?</h2>
-    <p class="challenge-name" id="challenger-name">Enter your name to join</p>
-    <div class="setup-field">
-      <label>Your name</label>
-      <input type="text" class="game-input" id="guest-name" placeholder="Name" maxlength="16" autocomplete="off">
-    </div>
-    <button class="pill-btn" id="guest-play-btn" style="max-width:280px;width:100%;margin-top:12px" onclick="Game.guestPlay()">Connect</button>
-  </section>
-
-  <!-- CHOOSE SECRET -->
-  <section class="screen" id="choose-screen">
-    <h2 class="setup-title">Pick a Number</h2>
-    <p class="setup-desc" id="choose-status">Choose a secret for your opponent to guess.</p>
-    <div class="choose-timer" id="choose-timer"><span id="choose-sec">15</span><span class="choose-ms" id="choose-ms">.000</span></div>
-    <div class="setup-field" style="margin-top:16px">
-      <input type="number" class="game-input" id="secret-input" placeholder="1 – 100" min="1" max="100">
-    </div>
-    <button class="pill-btn" id="lock-btn" style="max-width:280px;width:100%" onclick="Game.lockSecret()">Lock In</button>
-  </section>
-
-  <!-- GAME -->
-  <section class="screen" id="game-screen">
-    <div class="game-header">
-      <div class="att-counter">
-        <span class="att-num" id="att-num">0</span>
-        <span class="att-label">attempts</span>
-      </div>
-      <span class="turn-badge hidden" id="turn-badge"><span class="turn-dot"></span> <span id="turn-text">Your turn</span></span>
-      <span class="round-badge hidden" id="round-badge">Round 1/3</span>
-      <span class="game-timer" id="game-timer">00:00</span>
     </div>
 
-    <div class="range-display" id="range-display">
-      <div class="range-bound">
-        <span class="range-num" id="range-low">1</span>
-        <span class="range-arrow" id="range-low-arrow">low</span>
-      </div>
-      <div class="range-center" id="range-center">
-        <div class="big-number placeholder" id="big-number">
-          <span id="big-number-text">?</span><span class="cursor-blink"></span>
-        </div>
-        <div class="big-number-hint" id="big-number-hint">type a number</div>
-      </div>
-      <div class="range-bound">
-        <span class="range-num" id="range-high">100</span>
-        <span class="range-arrow" id="range-high-arrow">high</span>
-      </div>
-    </div>
-    <input class="hidden-input" id="hidden-input" type="text" inputmode="numeric" autocomplete="off">
-
-    <div class="feedback-strip">
-      <div style="text-align:center">
-        <div class="feedback-text" id="feedback-text"></div>
-        <div class="feedback-sub" id="feedback-sub"></div>
-      </div>
-    </div>
-
-    <div class="submit-row" id="submit-row">
-      <button class="circle-btn small" onclick="Game.clearInput()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
-      <button class="circle-btn" onclick="Game.guess()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-      </button>
-    </div>
-  </section>
-
-  <!-- WAIT -->
-  <section class="screen" id="wait-result-screen">
-    <h2 class="setup-title" style="color:#51cf66">You found it!</h2>
-    <p class="setup-desc">Waiting for opponent to finish...</p>
-    <div class="mode-icon-btn ring-btn" style="margin-top:24px;pointer-events:none"></div>
-  </section>
-
-  <!-- RESULT -->
-  <section class="screen" id="result-screen">
-    <div class="result-score-wrap flex-col">
-      <span class="result-score score-reveal" id="result-score">0</span>
-      <span class="result-max">/ 1000</span>
-    </div>
-    <div class="result-stats stagger-in" style="animation-delay:0.25s">
-      <div class="result-stat"><span class="result-stat-val" id="result-attempts">-</span><span class="result-stat-label">Attempts</span></div>
-      <div class="result-stat"><span class="result-stat-val" id="result-time">-</span><span class="result-stat-label">Time</span></div>
-      <div class="result-stat"><span class="result-stat-val" id="result-number">-</span><span class="result-stat-label">Number</span></div>
-    </div>
-    <p class="result-comment stagger-in" style="animation-delay:0.4s" id="result-comment"></p>
-    <div class="vs-card hidden" id="vs-card">
-      <div class="vs-title" id="vs-title">Challenge Result</div>
-      <div class="vs-row">
-        <div class="vs-player"><span class="vs-player-name" id="vs-p1-name">-</span><span class="vs-player-val" id="vs-p1-score">0</span></div>
-        <span class="vs-label">Score</span>
-        <div class="vs-player"><span class="vs-player-name" id="vs-p2-name">-</span><span class="vs-player-val" id="vs-p2-score">0</span></div>
-      </div>
-      <div class="vs-row">
-        <div class="vs-player"><span class="vs-player-val" id="vs-p1-att">-</span></div>
-        <span class="vs-label">Attempts</span>
-        <div class="vs-player"><span class="vs-player-val" id="vs-p2-att">-</span></div>
-      </div>
-      <div class="vs-winner-banner" id="vs-winner"></div>
-    </div>
-    <button class="pill-btn stagger-in" style="max-width:260px;width:100%;animation-delay:0.55s" onclick="Game.playAgain()">Play Again</button>
-  </section>
-</div>
-
-<!-- OPPONENT CARD (multiplayer) -->
-<div id="opp-container" class="card-base">
-  <div class="opp-inner">
-    <div class="opp-header-bar">
-      <div class="opp-name-badge">
-        <span class="opp-name-label">Opponent</span>
-        <span class="opp-name-val" id="opp-card-name">—</span>
-      </div>
-      <div class="opp-turn-pill your-turn" id="opp-turn-pill">
-        <span class="opp-turn-dot"></span>
-        <span id="opp-turn-text">Waiting</span>
-      </div>
-      <div class="opp-att">
-        <span class="opp-att-num" id="opp-card-att">0</span>
-        <span class="opp-att-label"> att</span>
-      </div>
-    </div>
-    <div class="opp-range">
-      <div class="opp-range-bound">
-        <span class="opp-range-num" id="opp-range-low">1</span>
-        <span class="opp-range-arrow">low</span>
-      </div>
-      <div class="opp-range-center">
-        <span class="opp-range-current" id="opp-range-current">—</span>
-        <span class="opp-range-hint" id="opp-range-hint"></span>
-      </div>
-      <div class="opp-range-bound">
-        <span class="opp-range-num" id="opp-range-high">100</span>
-        <span class="opp-range-arrow">high</span>
-      </div>
-    </div>
-    <div class="opp-chips-bar" id="opp-card-chips"></div>
-  </div>
-</div>
-</div>
-
-<script>
-const Game = (() => {
-  // ===== AUDIO =====
-  const SFX = (() => {
-    let ctx = null, muted = false;
-    function ensure() {
-      if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
-      if (ctx.state === 'suspended') ctx.resume();
-      return ctx;
-    }
-    function warmUp() {
-      ensure();
-      const o = ctx.createOscillator(); o.connect(ctx.destination); o.start(0); o.stop(ctx.currentTime+0.001);
-      document.removeEventListener('mousedown',warmUp); document.removeEventListener('touchstart',warmUp); document.removeEventListener('keydown',warmUp);
-    }
-    document.addEventListener('mousedown',warmUp); document.addEventListener('touchstart',warmUp,{passive:true}); document.addEventListener('keydown',warmUp);
-
-    function play(t) {
-      if (muted) return;
-      const c = ensure();
-      try {
-        const now = c.currentTime + 0.015;
-        const osc = (type, freq, dur, vol=0.06) => {
-          const o = c.createOscillator(), g = c.createGain();
-          o.type = type; o.frequency.setValueAtTime(freq, now);
-          g.gain.setValueAtTime(vol, now); g.gain.exponentialRampToValueAtTime(0.001, now+dur);
-          o.connect(g).connect(c.destination); o.start(now); o.stop(now+dur);
-          return o;
-        };
-        switch(t) {
-          case 'tick': osc('sine',880,0.08,0.08); break;
-          case 'type': osc('sine',600+Math.random()*200,0.05,0.04); break;
-          case 'delete': osc('sine',300,0.06,0.04); break;
-          case 'submit': { const o=osc('triangle',440,0.2,0.1); o.frequency.linearRampToValueAtTime(660,now+0.1); break; }
-          case 'high': { const o=osc('sawtooth',520,0.3,0.06); o.frequency.linearRampToValueAtTime(320,now+0.25); break; }
-          case 'low': { const o=osc('sawtooth',220,0.3,0.06); o.frequency.linearRampToValueAtTime(420,now+0.25); break; }
-          case 'win': [0,.12,.24,.36,.48].forEach((d,i)=>{const f=[523.25,659.25,783.99,1046.5,1318.5]; const o=c.createOscillator(),g=c.createGain(); o.type='sine'; o.frequency.setValueAtTime(f[i],now+d); g.gain.setValueAtTime(0.12,now+d); g.gain.exponentialRampToValueAtTime(0.001,now+d+0.3); o.connect(g).connect(c.destination); o.start(now+d); o.stop(now+d+0.35);}); break;
-          case 'whoosh': { const bs=c.sampleRate*0.15,b=c.createBuffer(1,bs,c.sampleRate),d=b.getChannelData(0); for(let i=0;i<bs;i++) d[i]=(Math.random()*2-1)*(1-i/bs); const s=c.createBufferSource(); s.buffer=b; const g=c.createGain(),f=c.createBiquadFilter(); f.type='bandpass'; f.frequency.setValueAtTime(2000,now); f.frequency.linearRampToValueAtTime(500,now+0.15); f.Q.value=2; g.gain.setValueAtTime(0.08,now); g.gain.exponentialRampToValueAtTime(0.001,now+0.15); s.connect(f).connect(g).connect(c.destination); s.start(now); s.stop(now+0.15); break; }
-          case 'click': osc('sine',1200,0.04,0.06); break;
-          case 'turn': osc('triangle',800,0.12,0.1); break;
-        }
-      } catch(e){}
-    }
-    return { play, toggle(){ muted=!muted; return muted; }, isMuted(){ return muted; } };
-  })();
-
-  // ===== STATE =====
-  const S = {
-    mode:'solo', target:0, attempt:0, guesses:[], startTime:0, elapsed:0,
-    timerInterval:null, playerName:'', won:false, typedValue:'', gameOver:false,
-    rangeLow:1, rangeHigh:100,
-    // Multi
-    peer:null, conn:null, matchId:null, oppName:'', rounds:3, currentRound:0,
-    mySecret:0, oppSecret:0, iAmReady:false, oppReady:false,
-    myFinalData:null, oppFinalData:null, choosingInterval:null,
-    roundResults:[], oppRoundResults:[],
-    // Turn-based
-    myTurn:false, iFinished:false, oppFinished:false,
-    // Opp range
-    oppRangeLow:1, oppRangeHigh:100
-  };
-
-  const $ = id => document.getElementById(id);
-
-  function show(id) {
-    SFX.play('whoosh');
-    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-    $(id).classList.add('active');
-    if (id === 'game-screen') $('hidden-input').focus();
-  }
-
-  function rand(a,b) { return Math.floor(Math.random()*(b-a+1))+a; }
-  function fmtTime(ms) { const s=Math.floor(ms/1000); return `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`; }
-
-  function burst(x,y,n,colors,cid='particles') {
-    const c=$(cid);
-    for(let i=0;i<n;i++){
-      const p=document.createElement('div'); p.className='particle';
-      const a=(Math.PI*2/n)*i+Math.random()*0.5, d=60+Math.random()*120;
-      p.style.left=x+'px'; p.style.top=y+'px';
-      p.style.setProperty('--px',Math.cos(a)*d+'px'); p.style.setProperty('--py',Math.sin(a)*d+'px');
-      p.style.background=colors[Math.floor(Math.random()*colors.length)];
-      const sz=4+Math.random()*5; p.style.width=sz+'px'; p.style.height=sz+'px';
-      c.appendChild(p); setTimeout(()=>p.remove(),1000);
-    }
-  }
-
-  // ===== RANGE UI =====
-  function resetRange() {
-    S.rangeLow = 1; S.rangeHigh = 100;
-    const rl = $('range-low'), rh = $('range-high');
-    rl.textContent = '1'; rl.className = 'range-num';
-    rh.textContent = '100'; rh.className = 'range-num';
-    $('range-low-arrow').className = 'range-arrow';
-    $('range-high-arrow').className = 'range-arrow';
-  }
-
-  function updateRange(val, isHigh) {
-    if (isHigh) {
-      if (val < S.rangeHigh) {
-        S.rangeHigh = val;
-        const el = $('range-high');
-        el.textContent = val;
-        el.className = 'range-num high updated';
-        $('range-high-arrow').className = 'range-arrow high';
-        setTimeout(()=> el.classList.remove('updated'), 400);
-      }
-    } else {
-      if (val > S.rangeLow) {
-        S.rangeLow = val;
-        const el = $('range-low');
-        el.textContent = val;
-        el.className = 'range-num low updated';
-        $('range-low-arrow').className = 'range-arrow low';
-        setTimeout(()=> el.classList.remove('updated'), 400);
-      }
-    }
-  }
-
-  // Opponent range
-  function resetOppRange() {
-    S.oppRangeLow = 1; S.oppRangeHigh = 100;
-    $('opp-range-low').textContent = '1';
-    $('opp-range-low').className = 'opp-range-num';
-    $('opp-range-high').textContent = '100';
-    $('opp-range-high').className = 'opp-range-num';
-    $('opp-range-current').textContent = '—';
-    $('opp-range-current').className = 'opp-range-current';
-    $('opp-range-hint').textContent = '';
-    $('opp-range-hint').className = 'opp-range-hint';
-  }
-
-  function updateOppRange(val, isHigh, correct) {
-    $('opp-range-current').textContent = val;
-    if (correct) {
-      $('opp-range-current').className = 'opp-range-current correct';
-      $('opp-range-hint').textContent = 'Found it!';
-      $('opp-range-hint').className = 'opp-range-hint correct';
-    } else if (isHigh) {
-      $('opp-range-current').className = 'opp-range-current high';
-      $('opp-range-hint').textContent = '↓ Too high';
-      $('opp-range-hint').className = 'opp-range-hint high';
-      if (val < S.oppRangeHigh) {
-        S.oppRangeHigh = val;
-        $('opp-range-high').textContent = val;
-        $('opp-range-high').className = 'opp-range-num high';
-      }
-    } else {
-      $('opp-range-current').className = 'opp-range-current low';
-      $('opp-range-hint').textContent = '↑ Too low';
-      $('opp-range-hint').className = 'opp-range-hint low';
-      if (val > S.oppRangeLow) {
-        S.oppRangeLow = val;
-        $('opp-range-low').textContent = val;
-        $('opp-range-low').className = 'opp-range-num low';
-      }
-    }
-  }
-
-  // ===== TURN UI =====
-  function updateTurnUI() {
-    if (S.mode === 'solo') return;
-    const tb = $('turn-badge');
-    const tt = $('turn-text');
-    const ot = $('opp-turn-pill');
-    const otxt = $('opp-turn-text');
-    tb.classList.remove('hidden');
-
-    if (S.iFinished) {
-      tb.className = 'turn-badge opp-turn';
-      tt.textContent = 'Finished';
-      $('range-display').style.opacity = '0.3';
-      $('submit-row').style.opacity = '0.3';
-      $('submit-row').style.pointerEvents = 'none';
-      $('big-number-hint').textContent = 'watching opponent...';
-
-      ot.className = 'opp-turn-pill ' + (S.oppFinished ? 'done' : 'their-turn');
-      otxt.textContent = S.oppFinished ? 'Finished' : 'Guessing...';
-      return;
-    }
-
-    if (S.myTurn) {
-      tb.className = 'turn-badge my-turn';
-      tt.textContent = 'Your turn';
-      $('range-display').style.opacity = '1';
-      $('submit-row').style.opacity = '1';
-      $('submit-row').style.pointerEvents = 'auto';
-      if (!S.typedValue) $('big-number-hint').textContent = 'your turn — type a number';
-
-      ot.className = 'opp-turn-pill your-turn';
-      otxt.textContent = 'Waiting';
-    } else {
-      tb.className = 'turn-badge opp-turn';
-      tt.textContent = "Opp's turn";
-      $('range-display').style.opacity = '0.4';
-      $('submit-row').style.opacity = '0.3';
-      $('submit-row').style.pointerEvents = 'none';
-      S.typedValue = '';
-      updateBigNum();
-      $('big-number-hint').textContent = "opponent's turn...";
-
-      ot.className = 'opp-turn-pill their-turn';
-      otxt.textContent = 'Guessing...';
-    }
-  }
-
-  // ===== INIT =====
-  function init() {
-    const matchId = new URLSearchParams(location.search).get('match');
-    if (matchId) { S.mode='guest'; S.matchId=matchId; show('challenge-intro-screen'); }
-    else show('intro-screen');
-    document.addEventListener('keydown', onKey);
-    $('game-screen').addEventListener('click', ()=>{ if(!S.gameOver && (S.mode==='solo'||S.myTurn)) $('hidden-input').focus(); });
-    $('host-name').addEventListener('input', onHostInput);
-    $('host-name').addEventListener('keydown', e=>{ if(e.key==='Enter') hostPlay(); });
-    $('guest-name').addEventListener('keydown', e=>{ if(e.key==='Enter') guestPlay(); });
-  }
-
-  // ===== PEER =====
-  function initPeer() {
-    return new Promise(r => {
-      if (S.peer) return r(S.peer);
-      const p = new Peer();
-      p.on('open', ()=>{ S.peer=p; r(p); });
-      p.on('error', e=>{ alert('Connection error.'); console.error(e); });
-    });
-  }
-
-  function setupConn() {
-    S.conn.on('data', d => {
-      if (d.type==='INIT') { S.oppName=d.name; S.rounds=d.rounds||3; S.conn.send({type:'INIT_ACK',name:S.playerName}); startChoosing(); }
-      else if (d.type==='INIT_ACK') { S.oppName=d.name; startChoosing(); }
-      else if (d.type==='READY') { S.oppSecret=d.secret; S.oppReady=true; checkStartRound(); }
-      else if (d.type==='GUESS') { handleOppGuess(d); }
-      else if (d.type==='FINISH') { S.oppFinalData=d.payload; S.oppFinished=true; updateTurnUI(); checkShowResult(); }
-    });
-  }
-
-  // ===== SETUP =====
-  function setRounds(n) {
-    S.rounds = n;
-    document.querySelectorAll('.round-pill').forEach(b => b.classList.toggle('active', +b.dataset.rounds===n));
-    SFX.play('click');
-  }
-
-  function onHostInput() {
-    $('setup-play-btn').disabled = !$('host-name').value.trim();
-  }
-
-  async function hostPlay() {
-    S.playerName = $('host-name').value.trim();
-    if (!S.playerName) return;
-    SFX.play('click');
-    S.mode = 'host';
-    $('setup-play-btn').textContent = 'Creating...';
-    $('setup-play-btn').disabled = true;
-    $('host-name').disabled = true;
-
-    await initPeer();
-    const url = location.origin + location.pathname + '?match=' + S.peer.id;
-    $('link-display').textContent = url;
-    $('link-box').classList.remove('hidden');
-    $('host-wait-msg').style.display = 'block';
-    $('setup-play-btn').style.display = 'none';
-
-    S.peer.on('connection', c => { S.conn = c; setupConn(); });
-  }
-
-  async function guestPlay() {
-    S.playerName = $('guest-name').value.trim();
-    if (!S.playerName) return;
-    SFX.play('click');
-    $('guest-play-btn').textContent = 'Connecting...';
-    $('guest-play-btn').disabled = true;
-    $('guest-name').disabled = true;
-
-    await initPeer();
-    S.conn = S.peer.connect(S.matchId);
-    S.conn.on('open', () => {
-      setupConn();
-      S.conn.send({ type:'INIT', name:S.playerName, rounds:S.rounds });
-    });
-  }
-
-  function copyLink() {
-    SFX.play('click');
-    navigator.clipboard.writeText($('link-display').textContent).then(()=>{
-      $('copy-btn').textContent='Copied!'; $('copy-btn').classList.add('copied');
-      setTimeout(()=>{ $('copy-btn').textContent='Copy'; $('copy-btn').classList.remove('copied'); },2000);
-    });
-  }
-
-  // ===== CHOOSING PHASE =====
-  function startChoosing() {
-    S.currentRound++;
-    S.iAmReady = false; S.oppReady = false;
-    S.myFinalData = null; S.oppFinalData = null;
-    S.iFinished = false; S.oppFinished = false;
-
-    document.body.classList.remove('multi-active');
-
-    show('choose-screen');
-    $('choose-status').innerHTML = `Round ${S.currentRound}/${S.rounds} vs <b>${S.oppName}</b>`;
-    $('secret-input').value = ''; $('secret-input').disabled = false;
-    $('lock-btn').disabled = false; $('lock-btn').textContent = 'Lock In';
-
-    const deadline = Date.now() + 30000;
-    clearInterval(S.choosingInterval);
-    S.choosingInterval = setInterval(()=>{
-      const remaining = Math.max(0, deadline - Date.now());
-      const sec = Math.floor(remaining / 1000);
-      const ms = remaining % 1000;
-      $('choose-sec').textContent = sec;
-      $('choose-ms').textContent = '.' + String(ms).padStart(3, '0');
-      if (remaining <= 0) { clearInterval(S.choosingInterval); if(!S.iAmReady) lockSecret(); }
-    }, 37);
-  }
-
-  function lockSecret() {
-    if (S.iAmReady) return;
-    let v = parseInt($('secret-input').value, 10);
-    if (isNaN(v)||v<1||v>100) { v=rand(1,100); $('secret-input').value=v; }
-    SFX.play('click');
-    S.mySecret = v;
-    S.iAmReady = true;
-    $('secret-input').disabled = true;
-    $('lock-btn').disabled = true;
-    $('lock-btn').textContent = 'Waiting...';
-    S.conn.send({ type:'READY', secret:S.mySecret });
-    checkStartRound();
-  }
-
-  function checkStartRound() {
-    if (!S.iAmReady || !S.oppReady) return;
-    clearInterval(S.choosingInterval);
-    S.target = S.oppSecret;
-    resetGameUI();
-    resetRange();
-    resetOppRange();
-
-    // Turn-based: host goes first
-    S.myTurn = (S.mode === 'host');
-    S.iFinished = false;
-    S.oppFinished = false;
-
-    // Show opponent card
-    document.body.classList.add('multi-active');
-    $('opp-card-name').textContent = S.oppName;
-    $('opp-card-att').textContent = '0';
-    $('opp-card-chips').innerHTML = '';
-
-    const rb = $('round-badge');
-    if (S.rounds > 1) { rb.classList.remove('hidden'); rb.textContent = `Round ${S.currentRound}/${S.rounds}`; }
-    else rb.classList.add('hidden');
-
-    updateTurnUI();
-    show('game-screen');
-    startTimer();
-  }
-
-  function handleOppGuess(d) {
-    $('opp-card-att').textContent = d.attempt;
-    updateOppRange(d.number, d.isHigh, d.correct);
-
-    const cls = d.correct ? 'correct' : (d.isHigh ? 'high' : 'low');
-    const chip = document.createElement('div');
-    chip.className = 'opp-chip ' + cls;
-    chip.textContent = d.number;
-    $('opp-card-chips').appendChild(chip);
-    $('opp-card-chips').scrollTop = $('opp-card-chips').scrollHeight;
-
-    if (d.correct) {
-      S.oppFinished = true;
-      if (!S.iFinished) { S.myTurn = true; updateTurnUI(); SFX.play('turn'); }
-    } else {
-      if (!S.iFinished) { S.myTurn = true; updateTurnUI(); SFX.play('turn'); }
-    }
-  }
-
-  // ===== KEYBOARD =====
-  function onKey(e) {
-    const scr = document.querySelector('.screen.active');
-    if (scr && scr.id === 'choose-screen' && e.key === 'Enter') { lockSecret(); return; }
-    if (!scr || scr.id !== 'game-screen' || S.gameOver) return;
-    if (S.mode !== 'solo' && !S.myTurn) return;
-    if (S.mode !== 'solo' && S.iFinished) return;
-
-    if (e.key >= '0' && e.key <= '9') { e.preventDefault(); if(S.typedValue.length<3){ S.typedValue+=e.key; SFX.play('type'); updateBigNum(); } }
-    else if (e.key==='Backspace') { e.preventDefault(); if(S.typedValue.length>0){ S.typedValue=S.typedValue.slice(0,-1); SFX.play('delete'); updateBigNum(); } }
-    else if (e.key==='Enter') { e.preventDefault(); guess(); }
-    else if (e.key==='Escape') { e.preventDefault(); clearInput(); }
-  }
-
-  function updateBigNum() {
-    const el=$('big-number'), txt=$('big-number-text'), hint=$('big-number-hint');
-    if (!S.typedValue) {
-      txt.textContent='?'; el.classList.add('placeholder');
-      if(S.mode==='solo'||S.myTurn) { hint.textContent='type a number'; hint.style.opacity='1'; }
-    } else {
-      txt.textContent=S.typedValue; el.classList.remove('placeholder');
-      hint.textContent='press enter'; hint.style.opacity='0.4';
-      el.classList.remove('num-slide-in'); void el.offsetWidth; el.classList.add('num-slide-in');
-    }
-  }
-
-  function clearInput() {
-    if (S.mode !== 'solo' && !S.myTurn) return;
-    S.typedValue=''; SFX.play('delete'); updateBigNum();
-  }
-
-  // ===== GAME =====
-  function resetGameUI() {
-    S.attempt=0; S.guesses=[]; S.won=false; S.gameOver=false; S.elapsed=0; S.typedValue='';
-    S.myFinalData=null;
-    $('att-num').textContent='0'; $('game-timer').textContent='00:00';
-    $('hidden-input').value='';
-    $('range-display').style.opacity='1';
-    $('submit-row').style.opacity='1'; $('submit-row').style.pointerEvents='auto';
-    updateBigNum();
-    $('feedback-text').textContent=''; $('feedback-text').className='feedback-text';
-    $('feedback-sub').textContent=''; $('feedback-sub').classList.remove('visible');
-    $('turn-badge').classList.add('hidden');
-    clearInterval(S.timerInterval);
-  }
-
-  function startTimer() {
-    S.startTime=Date.now();
-    S.timerInterval=setInterval(()=>{ S.elapsed=Date.now()-S.startTime; $('game-timer').textContent=fmtTime(S.elapsed); },250);
-  }
-
-  function startSolo() {
-    SFX.play('click'); S.mode='solo'; S.target=rand(1,100); S.currentRound=0; S.rounds=1;
-    S.roundResults=[]; S.oppRoundResults=[];
-    document.body.classList.remove('multi-active');
-    resetGameUI(); resetRange(); show('game-screen'); startTimer();
-  }
-
-  function startMulti() {
-    SFX.play('click'); S.mode='host';
-    S.currentRound=0; S.roundResults=[]; S.oppRoundResults=[];
-    $('host-name').value=''; $('host-name').disabled=false;
-    $('link-box').classList.add('hidden');
-    $('setup-play-btn').style.display='flex'; $('setup-play-btn').disabled=true; $('setup-play-btn').textContent='Create Challenge';
-    $('host-wait-msg').style.display='none';
-    $('copy-btn').textContent='Copy'; $('copy-btn').classList.remove('copied');
-    setRounds(3);
-    show('setup-screen');
-    setTimeout(()=>$('host-name').focus(),400);
-  }
-
-  function guess() {
-    if (S.mode !== 'solo' && !S.myTurn) return;
-    if (S.mode !== 'solo' && S.iFinished) return;
-
-    const val = parseInt(S.typedValue, 10);
-    if (isNaN(val)||val<1||val>100) {
-      $('game-container').classList.remove('earthquake'); void $('game-container').offsetWidth;
-      $('game-container').classList.add('earthquake'); setTimeout(()=>$('game-container').classList.remove('earthquake'),500);
-      SFX.play('tick'); return;
-    }
-    if (S.gameOver && S.mode==='solo') return;
-
-    SFX.play('submit');
-    S.attempt++; S.guesses.push(val); S.typedValue='';
-
-    const an=$('att-num'); an.textContent=S.attempt; an.classList.remove('bump'); void an.offsetWidth; an.classList.add('bump');
-
-    const diff=Math.abs(val-S.target), fb=$('feedback-text'), sub=$('feedback-sub');
-    flashHeat(diff);
-
-    const isCorrect = val===S.target;
-    const isHigh = val>S.target;
-
-    // Send guess to opponent in multi
-    if (S.mode !== 'solo') {
-      S.conn.send({ type:'GUESS', number:val, attempt:S.attempt, isHigh, correct:isCorrect });
-    }
-
-    if (isCorrect) {
-      S.won=true; S.gameOver=true;
-      clearInterval(S.timerInterval); S.elapsed=Date.now()-S.startTime;
-      const score = calcScore(S.attempt, S.elapsed);
-      S.myFinalData = { score, attempts:S.attempt, time:S.elapsed };
-
-      fb.textContent='Correct!'; fb.className='feedback-text correct visible';
-      sub.textContent='You found it!'; sub.classList.add('visible');
-      $('big-number-text').textContent=val; $('big-number').classList.remove('placeholder');
-      $('big-number').style.color='#51cf66'; $('big-number-hint').textContent='';
-
-      SFX.play('win');
-      $('game-container').classList.add('celebrate'); setTimeout(()=>$('game-container').classList.remove('celebrate'),700);
-      const r=$('big-number').getBoundingClientRect(), cr=$('game-container').getBoundingClientRect();
-      burst(r.left-cr.left+r.width/2, r.top-cr.top+r.height/2, 20, ['#51cf66','#94d82d','#ffd43b','#4dabf7','#cc5de8','#ff6b6b']);
-
-      if (S.mode !== 'solo') {
-        S.iFinished = true;
-        S.myTurn = false;
-        S.conn.send({ type:'FINISH', payload:S.myFinalData });
-        S.roundResults.push(S.myFinalData);
-        updateTurnUI();
-
-        if (S.oppFinished) {
-          setTimeout(()=>{ $('big-number').style.color=''; checkShowResult(); }, 1600);
-        } else {
-          setTimeout(()=>{ $('big-number').style.color=''; }, 1600);
-        }
-      } else {
-        setTimeout(()=>{ $('big-number').style.color=''; checkShowResult(); }, 1600);
-      }
-      return;
-    }
-
-    // Update range bounds
-    updateRange(val, isHigh);
-
-    fb.classList.remove('visible','high','low','correct'); void fb.offsetWidth;
-    fb.textContent = isHigh?'Too high':'Too low';
-    fb.classList.add('visible', isHigh?'high':'low');
-    SFX.play(isHigh?'high':'low');
-
-    let ht='';
-    if(diff<=3) ht='Burning hot!'; else if(diff<=8) ht='Very warm'; else if(diff<=20) ht='Getting warmer'; else if(diff<=40) ht='Cold'; else ht='Freezing cold';
-    sub.textContent=ht; sub.classList.add('visible');
-
-    const bn=$('big-number'); bn.classList.remove('spring'); void bn.offsetWidth; bn.classList.add('spring'); setTimeout(()=>bn.classList.remove('spring'),500);
-    updateBigNum();
-
-    // Turn-based: pass turn to opponent
-    if (S.mode !== 'solo' && !S.oppFinished) {
-      S.myTurn = false;
-      updateTurnUI();
-    }
-
-    if (S.mode==='solo' || S.myTurn) $('hidden-input').focus();
-  }
-
-  function flashHeat(diff) {
-    const f=$('heat-flash');
-    let c;
-    if(diff<=3) c='rgba(255,0,60,0.4)'; else if(diff<=8) c='rgba(255,100,0,0.3)';
-    else if(diff<=20) c='rgba(255,170,0,0.15)'; else if(diff<=40) c='rgba(0,100,255,0.1)';
-    else c='rgba(0,50,200,0.08)';
-    f.style.background=c; f.classList.remove('flash'); void f.offsetWidth; f.classList.add('flash');
-    setTimeout(()=>f.classList.remove('flash'),600);
-  }
-
-  function calcScore(att,ms) {
-    const a=Math.max(0,Math.round(1000*(1-Math.log(att)/Math.log(20))));
-    const tb=Math.max(0,Math.round(100*(1-Math.min(ms/1000,90)/90)));
-    return Math.min(1000,a+tb);
-  }
-
-  // ===== RESULTS =====
-  function checkShowResult() {
-    if (!S.myFinalData) return;
-    if (S.mode==='solo') { renderResult(); return; }
-
-    if (S.oppFinalData) {
-      S.oppRoundResults.push(S.oppFinalData);
-      if (S.currentRound < S.rounds) {
-        setTimeout(()=> startChoosing(), 1200);
-      } else {
-        document.body.classList.remove('multi-active');
-        renderResult();
-      }
-    }
-  }
-
-  function renderResult() {
-    const my = S.myFinalData;
-    const score = S.mode==='solo' ? my.score : S.roundResults.reduce((s,r)=>s+r.score,0);
-    const attempts = S.mode==='solo' ? my.attempts : S.roundResults.reduce((s,r)=>s+r.attempts,0);
-    const time = S.mode==='solo' ? my.time : S.roundResults.reduce((s,r)=>s+r.time,0);
-
-    $('result-score').textContent = score;
-    $('result-score').className = 'result-score score-reveal';
-    $('result-attempts').textContent = attempts;
-    $('result-time').textContent = fmtTime(time);
-    $('result-number').textContent = S.mode==='solo' ? S.target : S.rounds+'R';
-    $('result-comment').textContent = getComment(S.mode==='solo'?score:Math.round(score/S.rounds), attempts);
-
-    document.querySelectorAll('#result-screen .stagger-in').forEach(el=>{
-      el.style.opacity='0'; el.classList.remove('stagger-in'); void el.offsetWidth; el.classList.add('stagger-in');
-    });
-
-    const vs=$('vs-card');
-    if (S.mode==='solo') { vs.classList.add('hidden'); }
-    else {
-      vs.classList.remove('hidden');
-      const oppScore = S.oppRoundResults.reduce((s,r)=>s+r.score,0);
-      const oppAtt = S.oppRoundResults.reduce((s,r)=>s+r.attempts,0);
-
-      $('vs-title').textContent = S.rounds>1 ? `Best of ${S.rounds} — Result` : 'Challenge Result';
-      $('vs-p1-name').textContent = S.playerName;
-      $('vs-p1-score').textContent = score;
-      $('vs-p1-att').textContent = attempts;
-      $('vs-p2-name').textContent = S.oppName;
-      $('vs-p2-score').textContent = oppScore;
-      $('vs-p2-att').textContent = oppAtt;
-
-      $('vs-p1-score').classList.remove('winner'); $('vs-p2-score').classList.remove('winner');
-      if (score>oppScore) { $('vs-p1-score').classList.add('winner'); $('vs-winner').textContent=S.playerName+' wins!'; }
-      else if (oppScore>score) { $('vs-p2-score').classList.add('winner'); $('vs-winner').textContent=S.oppName+' wins!'; }
-      else $('vs-winner').textContent="It's a tie!";
-    }
-
-    SFX.play('tick');
-    show('result-screen');
-  }
-
-  function getComment(score) {
-    if(score>=900) return ["Binary search energy.","That was surgical.","Suspiciously good.","Your brain is overclocked."][rand(0,3)];
-    if(score>=700) return ["Not bad. Just... adequate.","Solid. Like a B+ student.","You've done this before."][rand(0,2)];
-    if(score>=400) return ["Mediocrity is a warm blanket.","Participation trophy unlocked.","Your intuition needs an update."][rand(0,2)];
-    if(score>0) return ["Your brain is a broken calculator.","Did you try with eyes closed?","A math teacher is crying."][rand(0,2)];
-    return ["Your brain runs on dial-up.","404: Skill not found.","That was painful to watch."][rand(0,2)];
-  }
-
-  function playAgain() { document.body.classList.remove('multi-active'); window.location.search=''; }
-  function toggleSound() { const m=SFX.toggle(); $('sound-toggle').classList.toggle('muted',m); if(!m) SFX.play('click'); }
-
-  document.addEventListener('DOMContentLoaded', init);
-
-  return { startSolo, startMulti, setRounds, copyLink, hostPlay, guestPlay, lockSecret, guess, clearInput, playAgain, toggleSound, show };
-})();
-</script>
+    <script src="script.js"></script>
 </body>
 </html>
