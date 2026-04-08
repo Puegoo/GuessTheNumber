@@ -78,6 +78,7 @@ window.Game = (() => {
     // Turn-based & Rematch
     myTurn: false, iFinished: false, oppFinished: false,
     iWantRematch: false, oppWantsRematch: false,
+    newlyLocked: null,
     
     // Opp range
     oppRangeLow: 0, oppRangeHigh: 100
@@ -230,6 +231,8 @@ window.Game = (() => {
       $('main-display').style.opacity = '1';
       $('submit-row').style.opacity = '1'; $('submit-row').style.pointerEvents = 'auto';
       ot.className = 'opp-turn-pill your-turn'; otxt.textContent = 'Waiting';
+      const gc = $('game-container');
+      gc.classList.remove('turn-pulse'); void gc.offsetWidth; gc.classList.add('turn-pulse');
     } else {
       tb.className = 'turn-badge opp-turn'; tt.textContent = "Opp's turn";
       $('main-display').style.opacity = '0.4';
@@ -318,6 +321,12 @@ window.Game = (() => {
       $('guest-play-btn').disabled = !(hasName && codeLen === 6);
   }
 
+  function resetGuestError() {
+    $('join-error').classList.add('hidden');
+    $('guest-code').value = '';
+    updateSetupButtons();
+  }
+
   function setRounds(n) {
     S.rounds = n;
     document.querySelectorAll('.round-pill').forEach(b => b.classList.toggle('active', +b.dataset.rounds===n));
@@ -397,8 +406,14 @@ window.Game = (() => {
                 
                 // Timeout if host doesn't reply
                 guestJoinTimeout = setTimeout(() => {
-                    alert("Room not found or Host left.");
-                    window.location.reload();
+                    $('join-error').classList.remove('hidden');
+                    const arrowSVG = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>';
+                    $('guest-play-btn').innerHTML = arrowSVG;
+                    $('guest-play-btn').disabled = false;
+                    $('player-name').disabled = false;
+                    $('guest-code').disabled = false;
+                    updateSetupButtons();
+                    if (roomChannel) { roomChannel.unsubscribe(); roomChannel = null; }
                 }, 5000);
             }
         });
@@ -431,14 +446,19 @@ window.Game = (() => {
       const sec = Math.floor(remaining / 1000);
       const ms = remaining % 1000;
       $('choose-sec').textContent = sec;
-      $('choose-ms').textContent = '.' + String(ms).padStart(3, '0');
-      if (remaining <= 0) { clearInterval(S.choosingInterval); if(!S.iAmReady) lockSecret(); }
+      $('choose-ms').textContent = '.' + String(Math.floor(ms / 10)).padStart(2, '0');
+      if (remaining <= 0) { clearInterval(S.choosingInterval); if(!S.iAmReady) lockSecret(true); }
     }, 37);
   }
 
-  function lockSecret() {
+  function lockSecret(forced = false) {
     if (S.iAmReady) return;
     SFX.play('click');
+    if (forced) {
+      const st = $('choose-status');
+      st.textContent = "⏰ Time's up! Random value locked.";
+      st.style.color = '#ffd43b';
+    }
     
     if (S.gameType === 'digits') {
         let v = $('secret-input').value.trim();
@@ -547,7 +567,8 @@ window.Game = (() => {
         
         for (let i = 0; i < 4; i++) {
             if (S.knownDigits[i] !== null) {
-                html += `<span style="color:#51cf66">${S.knownDigits[i]}</span>`;
+                const isNew = S.newlyLocked && S.newlyLocked[i];
+                html += `<span class="${isNew ? 'digit-locked-new' : ''}" style="color:#51cf66">${S.knownDigits[i]}</span>`;
                 allEmpty = false;
             } else {
                 if (S.typedValue[typeIdx]) {
@@ -699,7 +720,9 @@ window.Game = (() => {
             }
         }
 
+        const prevKnown = [...S.knownDigits];
         S.knownDigits = newKnown;
+        S.newlyLocked = newKnown.map((d, i) => d !== null && prevKnown[i] === null);
         S.typedValue = '';
 
         if (S.mode !== 'solo') {
@@ -707,7 +730,7 @@ window.Game = (() => {
         }
 
         if (isCorrect) {
-            updateBigNum();
+            updateBigNum(); S.newlyLocked = null;
             handleWin(guessArr.join(''));
         } else {
             const hist = document.createElement('div');
@@ -716,7 +739,7 @@ window.Game = (() => {
             $('history-container').prepend(hist);
             
             SFX.play('low');
-            updateBigNum();
+            updateBigNum(); S.newlyLocked = null;
 
             if (S.mode !== 'solo' && !S.oppFinished) { S.myTurn = false; updateTurnUI(); }
             if (S.mode==='solo' || S.myTurn) $('hidden-input').focus();
@@ -869,7 +892,19 @@ window.Game = (() => {
       if (score>oppScore) { $('vs-p1-score').classList.add('winner'); $('vs-winner').textContent=S.playerName+' wins!'; }
       else if (oppScore>score) { $('vs-p2-score').classList.add('winner'); $('vs-winner').textContent=S.oppName+' wins!'; }
       else $('vs-winner').textContent="It's a tie!";
-      
+
+      const rb = $('round-breakdown');
+      if (S.rounds > 1 && S.roundResults.length > 0) {
+        let html = '';
+        for (let i = 0; i < S.roundResults.length; i++) {
+          const my = S.roundResults[i], opp = S.oppRoundResults[i];
+          if (!my || !opp) continue;
+          const myW = my.score > opp.score, oppW = opp.score > my.score;
+          html += `<div class="round-row"><span class="round-score${myW?' winner':''}">${my.score}</span><span class="round-label">R${i+1}</span><span class="round-score${oppW?' winner':''}">${opp.score}</span></div>`;
+        }
+        rb.innerHTML = html; rb.classList.remove('hidden');
+      } else { rb.classList.add('hidden'); }
+
       $('rematch-btn').textContent = 'Rematch';
     }
 
@@ -927,5 +962,5 @@ window.Game = (() => {
 
   document.addEventListener('DOMContentLoaded', init);
 
-  return { setGameType, setMultiMode, startSolo, startMulti, setRounds, hostPlay, guestPlay, lockSecret, guess, clearInput, playAgain, quitToMenu, toggleTheme, toggleSound, show };
+  return { setGameType, setMultiMode, startSolo, startMulti, setRounds, hostPlay, guestPlay, lockSecret, guess, clearInput, playAgain, quitToMenu, toggleTheme, toggleSound, show, resetGuestError };
 })();
