@@ -26,97 +26,137 @@ html, body {
 
 body { display: flex; align-items: center; justify-content: center; }
 
-#app-wrapper { display: flex; align-items: center; gap: 20px; width: 100%; height: 100%; justify-content: center; }
+#app-wrapper {
+  display: flex; flex-direction: column; align-items: center; gap: 16px;
+  width: 100%; height: 100%; justify-content: center;
+}
 
-#game-container {
+.card-base {
   position: relative; width: 100%; height: 100%;
   background: #000; overflow: hidden;
 }
 
 @media (min-width: 768px) {
   body { background: #f0f0f0; }
-  #game-container {
-    width: 440px; height: 640px; border-radius: 20px;
+  .card-base {
+    width: 560px; border-radius: 20px; flex-shrink: 0;
     box-shadow: 0 0 0 1px rgba(0,0,0,0.08), 0 30px 90px rgba(0,0,0,0.35), 0 10px 35px rgba(0,0,0,0.2);
-    flex-shrink: 0;
   }
+  #game-container { height: 440px; }
 }
 
 /* --- Opponent Card (multiplayer) --- */
-#opp-card {
-  display: none; width: 260px; height: 640px;
-  background: #000; border-radius: 20px; overflow: hidden;
-  box-shadow: 0 0 0 1px rgba(0,0,0,0.08), 0 30px 90px rgba(0,0,0,0.35), 0 10px 35px rgba(0,0,0,0.2);
-  flex-direction: column; padding: 28px 20px; flex-shrink: 0;
+#opp-container {
+  display: none; background: #000; overflow: hidden;
 }
-body.multi-active #opp-card { display: flex; }
+body.multi-active #opp-container { display: block; }
+@media (min-width: 768px) {
+  #opp-container { height: 340px; }
+}
 
-.opp-header { display: flex; flex-direction: column; gap: 2px; margin-bottom: 16px; }
-.opp-label { font-size: 10px; font-weight: 600; color: rgba(255,255,255,0.25); text-transform: uppercase; letter-spacing: 0.1em; }
-.opp-name { font-size: 22px; font-weight: 800; letter-spacing: -0.03em; }
+.opp-inner {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 24px 28px; height: 100%;
+}
+.opp-header-bar {
+  width: 100%; display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;
+}
+.opp-name-badge {
+  display: flex; align-items: center; gap: 8px;
+}
+.opp-name-label { font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.3); text-transform: uppercase; letter-spacing: 0.06em; }
+.opp-name-val { font-size: 16px; font-weight: 800; letter-spacing: -0.02em; }
 
 .opp-turn-pill {
-  display: inline-flex; align-items: center; gap: 6px;
-  height: 28px; padding: 0 12px; border-radius: 28px;
-  font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;
-  margin-bottom: 20px; transition: all 0.3s;
+  display: inline-flex; align-items: center; gap: 5px;
+  height: 26px; padding: 0 10px; border-radius: 26px;
+  font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;
+  transition: all 0.3s;
 }
 .opp-turn-pill.their-turn { background: rgba(255,200,0,0.1); color: #ffd43b; }
-.opp-turn-pill.your-turn { background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.25); }
+.opp-turn-pill.your-turn { background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.2); }
 .opp-turn-pill.done { background: rgba(81,207,102,0.1); color: #51cf66; }
-.opp-turn-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
-.opp-turn-pill.their-turn .opp-turn-dot { animation: pulse 1s infinite alternate; }
+.opp-turn-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+.opp-turn-pill.their-turn .opp-turn-dot { animation: pulse 0.8s infinite alternate; }
 
-.opp-stats { display: flex; align-items: baseline; gap: 6px; margin-bottom: 16px; }
-.opp-att-num { font-size: 32px; font-weight: 900; letter-spacing: -0.04em; }
-.opp-att-label { font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.3); text-transform: uppercase; }
+.opp-stats-bar {
+  display: flex; align-items: center; gap: 16px; margin-bottom: 8px;
+}
+.opp-att { display: flex; align-items: baseline; gap: 4px; }
+.opp-att-num { font-size: 20px; font-weight: 800; }
+.opp-att-label { font-size: 11px; font-weight: 500; color: rgba(255,255,255,0.3); text-transform: uppercase; }
 
-.opp-last-wrap { margin-bottom: 16px; }
-.opp-last-label { font-size: 10px; font-weight: 500; color: rgba(255,255,255,0.25); text-transform: uppercase; letter-spacing: 0.06em; display: block; margin-bottom: 4px; }
-.opp-last-val { font-size: 36px; font-weight: 900; letter-spacing: -0.04em; transition: color 0.3s; }
-.opp-last-val.high { color: #ff6b6b; }
-.opp-last-val.low { color: #4dabf7; }
-.opp-last-val.correct { color: #51cf66; }
-.opp-last-hint { font-size: 12px; font-weight: 600; margin-top: 2px; }
-.opp-last-hint.high { color: #ff6b6b; }
-.opp-last-hint.low { color: #4dabf7; }
-.opp-last-hint.correct { color: #51cf66; }
-
-.opp-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: auto; overflow-y: auto; align-content: flex-end; scrollbar-width: none; }
-.opp-chips::-webkit-scrollbar { display: none; }
-.opp-chip {
-  height: 26px; min-width: 34px; padding: 0 8px; border-radius: 26px;
-  font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+/* Opp range display */
+.opp-range {
+  display: flex; align-items: center; justify-content: center; gap: 0; width: 100%;
+  flex: 1; min-height: 80px;
+}
+.opp-range-bound {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  min-width: 60px; transition: all 0.3s;
+}
+.opp-range-num {
+  font-size: min(40px, 10vw); font-weight: 900; letter-spacing: -0.04em;
+  color: rgba(255,255,255,0.15); transition: color 0.3s;
   font-variant-numeric: tabular-nums;
 }
-.opp-chip.high { background: rgba(255,107,107,0.1); color: #ff6b6b; }
-.opp-chip.low { background: rgba(77,171,247,0.1); color: #4dabf7; }
-.opp-chip.correct { background: rgba(81,207,102,0.12); color: #51cf66; }
+.opp-range-num.low { color: #4dabf7; }
+.opp-range-num.high { color: #ff6b6b; }
+.opp-range-num.correct { color: #51cf66; }
+.opp-range-arrow {
+  font-size: 10px; font-weight: 600; color: rgba(255,255,255,0.15); text-transform: uppercase;
+  letter-spacing: 0.06em; margin-top: 2px;
+}
+.opp-range-center {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 0 16px;
+}
+.opp-range-current {
+  font-size: min(52px, 13vw); font-weight: 900; letter-spacing: -0.05em;
+  transition: color 0.3s;
+}
+.opp-range-current.high { color: #ff6b6b; }
+.opp-range-current.low { color: #4dabf7; }
+.opp-range-current.correct { color: #51cf66; }
+.opp-range-hint {
+  font-size: 11px; font-weight: 600; margin-top: 2px; transition: color 0.3s;
+  color: rgba(255,255,255,0.2);
+}
+.opp-range-hint.high { color: #ff6b6b; }
+.opp-range-hint.low { color: #4dabf7; }
+.opp-range-hint.correct { color: #51cf66; }
+
+.opp-chips-bar {
+  display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; margin-top: 8px;
+  max-height: 60px; overflow-y: auto; scrollbar-width: none;
+}
+.opp-chips-bar::-webkit-scrollbar { display: none; }
+.opp-chip {
+  height: 22px; min-width: 30px; padding: 0 6px; border-radius: 22px;
+  font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+  font-variant-numeric: tabular-nums;
+}
+.opp-chip.high { background: rgba(255,107,107,0.08); color: rgba(255,107,107,0.5); }
+.opp-chip.low { background: rgba(77,171,247,0.08); color: rgba(77,171,247,0.5); }
+.opp-chip.correct { background: rgba(81,207,102,0.1); color: #51cf66; }
 
 /* Mobile opponent card */
 @media (max-width: 767px) {
-  #app-wrapper { flex-direction: column; gap: 0; }
-  body.multi-active #opp-card {
-    position: fixed; top: 0; right: 0; z-index: 200;
-    width: 150px; height: auto; max-height: 50vh;
-    border-radius: 0 0 0 16px; padding: 14px 12px;
-    box-shadow: -4px 4px 20px rgba(0,0,0,0.5);
-    border-left: 1px solid rgba(255,255,255,0.06);
-    border-bottom: 1px solid rgba(255,255,255,0.06);
+  body.multi-active #opp-container {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
+    height: 180px; border-radius: 20px 20px 0 0;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    box-shadow: 0 -10px 40px rgba(0,0,0,0.5);
   }
-  body.multi-active #opp-card .opp-name { font-size: 15px; }
-  body.multi-active #opp-card .opp-att-num { font-size: 22px; }
-  body.multi-active #opp-card .opp-last-val { font-size: 24px; }
-  body.multi-active #opp-card .opp-stats { margin-bottom: 8px; }
-  body.multi-active #opp-card .opp-last-wrap { margin-bottom: 8px; }
-  body.multi-active #opp-card .opp-turn-pill { margin-bottom: 10px; }
+  body.multi-active #opp-container .opp-inner { padding: 14px 20px; }
+  body.multi-active #game-container { height: calc(100% - 180px); }
 }
 
 /* --- Screens --- */
 .screen {
   position: absolute; inset: 0;
   display: flex; flex-direction: column; align-items: center;
-  padding: 40px 28px;
+  padding: 36px 28px;
   opacity: 0; pointer-events: none;
   transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1);
   z-index: 1;
@@ -136,8 +176,8 @@ body.multi-active #opp-card { display: flex; }
 @keyframes ringSpin { 0% { --ring-angle: 0deg; } 100% { --ring-angle: 360deg; } }
 
 /* === INTRO === */
-#intro-screen { justify-content: flex-start; padding-top: 48px; gap: 0; }
-@media (min-width: 768px) { #intro-screen { padding-top: 44px; } }
+#intro-screen { justify-content: flex-start; padding-top: 40px; gap: 0; }
+@media (min-width: 768px) { #intro-screen { padding-top: 36px; } }
 
 .logo-wrap { display: flex; flex-direction: column; align-items: flex-start; }
 .logo-title {
@@ -150,7 +190,7 @@ body.multi-active #opp-card { display: flex; }
 .logo-number { font-size: min(30px, 7.5vw); font-weight: 700; letter-spacing: -0.02em; }
 
 .intro-bottom { margin-top: auto; display: flex; flex-direction: column; align-items: center; width: 100%; }
-.intro-desc { font-size: 14px; color: rgba(255,255,255,0.45); line-height: 1.55; max-width: 280px; text-align: center; margin-bottom: 12px; }
+.intro-desc { font-size: 14px; color: rgba(255,255,255,0.45); line-height: 1.55; max-width: 300px; text-align: center; margin-bottom: 12px; }
 .intro-question { font-size: 14px; font-weight: 600; color: rgba(255,255,255,0.85); margin-bottom: 20px; }
 
 .mode-icons { display: flex; gap: 16px; }
@@ -179,7 +219,7 @@ body.multi-active #opp-card { display: flex; }
 .mode-icon-btn.ring-btn:hover::before { inset: -6px; filter: blur(8px); }
 .mode-icon-btn.ring-btn:hover { box-shadow: 0 0 28px 6px rgba(255,0,128,0.25), 0 0 28px 6px rgba(0,200,255,0.2); }
 
-.watermark { position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); font-size: 11px; font-weight: 500; color: rgba(255,255,255,0.1); }
+.watermark { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); font-size: 11px; font-weight: 500; color: rgba(255,255,255,0.1); }
 
 /* === SHARED === */
 .game-input {
@@ -205,7 +245,7 @@ body.multi-active #opp-card { display: flex; }
 .pill-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 
 .back-btn {
-  position: absolute; top: 20px; left: 20px; width: 40px; height: 40px;
+  position: absolute; top: 16px; left: 16px; width: 40px; height: 40px;
   border-radius: 50%; border: 1px solid rgba(255,255,255,0.1);
   background: transparent; color: #fff;
   display: flex; align-items: center; justify-content: center;
@@ -215,7 +255,7 @@ body.multi-active #opp-card { display: flex; }
 .back-btn svg { width: 18px; height: 18px; }
 
 .sound-toggle {
-  position: absolute; bottom: 16px; right: 16px; width: 36px; height: 36px;
+  position: absolute; bottom: 12px; right: 12px; width: 36px; height: 36px;
   border-radius: 50%; border: 1px solid rgba(255,255,255,0.1);
   background: transparent; color: rgba(255,255,255,0.35);
   display: flex; align-items: center; justify-content: center;
@@ -284,85 +324,117 @@ body.multi-active #opp-card { display: flex; }
 .choose-ms { font-size: 0.4em; font-weight: 700; color: rgba(255,255,255,0.35); }
 
 /* === GAME SCREEN === */
-#game-screen { justify-content: flex-start; padding-top: 28px; cursor: default; user-select: none; }
+#game-screen { justify-content: flex-start; padding: 20px 24px; cursor: default; user-select: none; }
 
-.game-header { width: 100%; display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; padding: 0 4px; }
+.game-header {
+  width: 100%; display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;
+}
 .game-timer { font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.3); font-variant-numeric: tabular-nums; }
 
 /* Turn badge */
 .turn-badge {
-  display: inline-flex; align-items: center; gap: 5px; height: 28px; padding: 0 12px;
-  border-radius: 28px; font-size: 11px; font-weight: 600; text-transform: uppercase;
+  display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 10px;
+  border-radius: 26px; font-size: 10px; font-weight: 600; text-transform: uppercase;
   letter-spacing: 0.04em; transition: all 0.3s;
 }
 .turn-badge.my-turn { background: rgba(81,207,102,0.12); color: #51cf66; }
 .turn-badge.opp-turn { background: rgba(255,200,0,0.1); color: #ffd43b; }
-.turn-badge .turn-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.turn-badge .turn-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
 .turn-badge.my-turn .turn-dot { animation: pulse 0.8s infinite alternate; }
 
 /* Round badge */
 .round-badge {
-  display: inline-flex; align-items: center; gap: 4px; height: 26px; padding: 0 10px;
-  border-radius: 26px; background: rgba(255,255,255,0.06);
-  font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.4);
+  display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 10px;
+  border-radius: 24px; background: rgba(255,255,255,0.06);
+  font-size: 10px; font-weight: 600; color: rgba(255,255,255,0.4);
   text-transform: uppercase; letter-spacing: 0.04em;
 }
 
 /* Attempts counter */
-.att-counter { display: flex; align-items: baseline; gap: 5px; }
-.att-num { font-size: 24px; font-weight: 800; letter-spacing: -0.03em; }
-.att-label { font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.3); text-transform: uppercase; }
+.att-counter { display: flex; align-items: baseline; gap: 4px; }
+.att-num { font-size: 22px; font-weight: 800; letter-spacing: -0.03em; }
+.att-label { font-size: 11px; font-weight: 500; color: rgba(255,255,255,0.3); text-transform: uppercase; }
 @keyframes attBump { 0% { transform: scale(1); } 40% { transform: scale(1.3); } 100% { transform: scale(1); } }
 .att-num.bump { animation: attBump 0.35s cubic-bezier(0.34,1.56,0.64,1); }
 
-/* Big number display */
-.big-number-area { width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; min-height: 100px; margin-bottom: 2px; transition: opacity 0.3s; }
-.big-number { font-size: min(80px, 20vw); font-weight: 900; letter-spacing: -0.05em; line-height: 1; color: #fff; transition: color 0.3s; min-height: 1.1em; display: flex; align-items: center; justify-content: center; }
+/* === RANGE DISPLAY === */
+.range-display {
+  display: flex; align-items: center; justify-content: center;
+  width: 100%; flex: 1; min-height: 0;
+}
+.range-bound {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  transition: all 0.4s cubic-bezier(0.34,1.56,0.64,1);
+}
+.range-num {
+  font-size: min(48px, 12vw); font-weight: 900; letter-spacing: -0.04em;
+  color: rgba(255,255,255,0.12); font-variant-numeric: tabular-nums;
+  transition: color 0.3s, transform 0.3s;
+}
+.range-num.active { color: rgba(255,255,255,0.25); }
+.range-num.low { color: #4dabf7; }
+.range-num.high { color: #ff6b6b; }
+.range-arrow {
+  font-size: 9px; font-weight: 600; color: rgba(255,255,255,0.1); text-transform: uppercase;
+  letter-spacing: 0.08em; margin-top: 2px; transition: color 0.3s;
+}
+.range-arrow.low { color: rgba(77,171,247,0.4); }
+.range-arrow.high { color: rgba(255,107,107,0.4); }
+
+@keyframes boundUpdate {
+  0% { transform: scale(1); } 30% { transform: scale(1.15); } 100% { transform: scale(1); }
+}
+.range-num.updated { animation: boundUpdate 0.4s cubic-bezier(0.34,1.56,0.64,1); }
+
+.range-center {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 0 8px; position: relative; min-width: 120px;
+}
+.big-number {
+  font-size: min(72px, 18vw); font-weight: 900; letter-spacing: -0.05em; line-height: 1;
+  color: #fff; transition: color 0.3s; min-height: 1.1em;
+  display: flex; align-items: center; justify-content: center;
+}
 .big-number.placeholder { color: rgba(255,255,255,0.12); }
-.big-number .cursor-blink { display: inline-block; width: 3px; height: 0.7em; background: rgba(255,255,255,0.5); margin-left: 3px; animation: cursorBlink 1s step-end infinite; }
+.big-number .cursor-blink {
+  display: inline-block; width: 3px; height: 0.65em; background: rgba(255,255,255,0.5);
+  margin-left: 2px; animation: cursorBlink 1s step-end infinite;
+}
 @keyframes cursorBlink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
 .hidden-input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
-.big-number-hint { font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.2); margin-top: 6px; transition: opacity 0.3s; }
+.big-number-hint {
+  font-size: 11px; font-weight: 500; color: rgba(255,255,255,0.2);
+  margin-top: 2px; transition: opacity 0.3s; white-space: nowrap;
+}
 
 /* Feedback */
-.feedback-strip { width: 100%; display: flex; align-items: center; justify-content: center; min-height: 40px; margin-bottom: 4px; }
-.feedback-text { font-size: 16px; font-weight: 700; text-transform: uppercase; opacity: 0; transform: translateY(6px); transition: opacity 0.3s, transform 0.3s; }
+.feedback-strip { width: 100%; display: flex; align-items: center; justify-content: center; min-height: 36px; }
+.feedback-text {
+  font-size: 14px; font-weight: 700; text-transform: uppercase;
+  opacity: 0; transform: translateY(6px); transition: opacity 0.3s, transform 0.3s;
+}
 .feedback-text.visible { opacity: 1; transform: translateY(0); }
 .feedback-text.high { color: #ff6b6b; }
 .feedback-text.low { color: #4dabf7; }
 .feedback-text.correct { color: #51cf66; }
-.feedback-sub { font-size: 12px; color: rgba(255,255,255,0.3); margin-top: 2px; opacity: 0; transition: opacity 0.3s 0.05s; text-align: center; }
+.feedback-sub {
+  font-size: 11px; color: rgba(255,255,255,0.3); margin-top: 1px;
+  opacity: 0; transition: opacity 0.3s 0.05s; text-align: center;
+}
 .feedback-sub.visible { opacity: 1; }
 
 /* Submit */
-.submit-row { display: flex; align-items: center; justify-content: center; gap: 14px; width: 100%; margin-bottom: 10px; transition: opacity 0.3s; }
+.submit-row { display: flex; align-items: center; justify-content: center; gap: 14px; width: 100%; margin: 4px 0; transition: opacity 0.3s; }
 .circle-btn {
-  width: 52px; height: 52px; border-radius: 50%; border: none;
+  width: 48px; height: 48px; border-radius: 50%; border: none;
   background: #fff; color: #000; display: flex; align-items: center; justify-content: center;
   cursor: pointer; transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1); flex-shrink: 0;
 }
 .circle-btn:active { transform: scale(0.9); }
 .circle-btn:hover { transform: scale(1.06); }
 .circle-btn svg { width: 20px; height: 20px; }
-.circle-btn.small { width: 38px; height: 38px; background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.5); }
+.circle-btn.small { width: 36px; height: 36px; background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.5); }
 .circle-btn.small svg { width: 16px; height: 16px; }
-
-/* Guess chips */
-.guess-history { width: 100%; flex: 1; overflow-y: auto; display: flex; flex-wrap: wrap; align-content: flex-start; gap: 6px; padding: 2px 6px 16px; justify-content: center; scrollbar-width: none; }
-.guess-history::-webkit-scrollbar { display: none; }
-.guess-chip {
-  display: flex; align-items: center; justify-content: center;
-  min-width: 48px; height: 36px; padding: 0 12px; border-radius: 36px;
-  font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums;
-  opacity: 0; transform: scale(0.5) translateY(8px);
-  animation: chipIn 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards;
-}
-@keyframes chipIn { to { opacity: 1; transform: scale(1) translateY(0); } }
-.guess-chip.high { background: rgba(255,107,107,0.12); color: #ff6b6b; }
-.guess-chip.low { background: rgba(77,171,247,0.12); color: #4dabf7; }
-.guess-chip.correct { background: rgba(81,207,102,0.15); color: #51cf66; animation: chipCorrect 0.6s cubic-bezier(0.34,1.56,0.64,1) forwards; }
-@keyframes chipCorrect { 0% { opacity: 0; transform: scale(0.3); } 60% { transform: scale(1.2); } 100% { opacity: 1; transform: scale(1); } }
-.guess-chip .arrow { font-size: 11px; margin-left: 3px; opacity: 0.6; }
 
 /* Overlays */
 .heat-flash { position: absolute; inset: 0; pointer-events: none; opacity: 0; z-index: 100; border-radius: inherit; }
@@ -396,13 +468,13 @@ body.multi-active #opp-card { display: flex; }
 /* === RESULT === */
 #result-screen { justify-content: center; gap: 4px; overflow-y: auto; }
 .result-score-wrap { margin-bottom: 6px; }
-.result-score { font-size: min(80px, 20vw); font-weight: 900; letter-spacing: -0.05em; line-height: 1; }
-.result-max { font-size: min(24px, 6vw); font-weight: 400; color: rgba(255,255,255,0.25); }
+.result-score { font-size: min(72px, 18vw); font-weight: 900; letter-spacing: -0.05em; line-height: 1; }
+.result-max { font-size: min(22px, 5.5vw); font-weight: 400; color: rgba(255,255,255,0.25); }
 .result-stats { display: flex; gap: 24px; margin: 10px 0 12px; }
 .result-stat { display: flex; flex-direction: column; align-items: center; gap: 2px; }
 .result-stat-val { font-size: 20px; font-weight: 700; }
 .result-stat-label { font-size: 10px; font-weight: 500; color: rgba(255,255,255,0.3); text-transform: uppercase; letter-spacing: 0.06em; }
-.result-comment { font-size: 14px; color: rgba(255,255,255,0.4); text-align: center; max-width: 260px; line-height: 1.5; margin-bottom: 16px; font-style: italic; }
+.result-comment { font-size: 14px; color: rgba(255,255,255,0.4); text-align: center; max-width: 280px; line-height: 1.5; margin-bottom: 14px; font-style: italic; }
 
 @keyframes scoreReveal { 0% { opacity: 0; transform: translateY(24px) scale(0.8); filter: blur(8px); } 100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); } }
 .score-reveal { animation: scoreReveal 0.7s cubic-bezier(0.16,1,0.3,1) forwards; }
@@ -410,16 +482,16 @@ body.multi-active #opp-card { display: flex; }
 .stagger-in { opacity: 0; animation: staggerIn 0.4s cubic-bezier(0.16,1,0.3,1) forwards; }
 
 /* VS Card */
-.vs-card { width: 100%; max-width: 280px; border-radius: 14px; background: rgba(255,255,255,0.04); padding: 16px; margin-bottom: 16px; }
-.vs-title { font-size: 10px; font-weight: 600; color: rgba(255,255,255,0.3); text-transform: uppercase; letter-spacing: 0.08em; text-align: center; margin-bottom: 12px; }
-.vs-row { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; }
+.vs-card { width: 100%; max-width: 300px; border-radius: 14px; background: rgba(255,255,255,0.04); padding: 14px; margin-bottom: 14px; }
+.vs-title { font-size: 10px; font-weight: 600; color: rgba(255,255,255,0.3); text-transform: uppercase; letter-spacing: 0.08em; text-align: center; margin-bottom: 10px; }
+.vs-row { display: flex; align-items: center; justify-content: space-between; padding: 5px 0; }
 .vs-row + .vs-row { border-top: 1px solid rgba(255,255,255,0.06); }
 .vs-player { display: flex; flex-direction: column; align-items: center; gap: 2px; flex: 1; }
 .vs-player-name { font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.6); max-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .vs-player-val { font-size: 18px; font-weight: 800; }
 .vs-player-val.winner { color: #51cf66; }
 .vs-label { font-size: 10px; font-weight: 500; color: rgba(255,255,255,0.2); text-transform: uppercase; letter-spacing: 0.06em; width: 56px; text-align: center; }
-.vs-winner-banner { text-align: center; margin-top: 10px; font-size: 14px; font-weight: 700; color: #51cf66; }
+.vs-winner-banner { text-align: center; margin-top: 8px; font-size: 14px; font-weight: 700; color: #51cf66; }
 
 .hidden { display: none !important; }
 .flex-col { display: flex; flex-direction: column; align-items: center; }
@@ -427,7 +499,7 @@ body.multi-active #opp-card { display: flex; }
 </head>
 <body>
 <div id="app-wrapper">
-<div id="game-container">
+<div id="game-container" class="card-base">
   <div class="heat-flash" id="heat-flash"></div>
   <div class="particle-container" id="particles"></div>
 
@@ -529,11 +601,21 @@ body.multi-active #opp-card { display: flex; }
       <span class="game-timer" id="game-timer">00:00</span>
     </div>
 
-    <div class="big-number-area" id="big-number-area">
-      <div class="big-number placeholder" id="big-number">
-        <span id="big-number-text">?</span><span class="cursor-blink"></span>
+    <div class="range-display" id="range-display">
+      <div class="range-bound">
+        <span class="range-num" id="range-low">1</span>
+        <span class="range-arrow" id="range-low-arrow">low</span>
       </div>
-      <div class="big-number-hint" id="big-number-hint">type a number</div>
+      <div class="range-center" id="range-center">
+        <div class="big-number placeholder" id="big-number">
+          <span id="big-number-text">?</span><span class="cursor-blink"></span>
+        </div>
+        <div class="big-number-hint" id="big-number-hint">type a number</div>
+      </div>
+      <div class="range-bound">
+        <span class="range-num" id="range-high">100</span>
+        <span class="range-arrow" id="range-high-arrow">high</span>
+      </div>
     </div>
     <input class="hidden-input" id="hidden-input" type="text" inputmode="numeric" autocomplete="off">
 
@@ -552,8 +634,6 @@ body.multi-active #opp-card { display: flex; }
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
       </button>
     </div>
-
-    <div class="guess-history" id="guess-history"></div>
   </section>
 
   <!-- WAIT -->
@@ -594,25 +674,38 @@ body.multi-active #opp-card { display: flex; }
 </div>
 
 <!-- OPPONENT CARD (multiplayer) -->
-<div id="opp-card">
-  <div class="opp-header">
-    <span class="opp-label">Opponent</span>
-    <span class="opp-name" id="opp-card-name">—</span>
+<div id="opp-container" class="card-base">
+  <div class="opp-inner">
+    <div class="opp-header-bar">
+      <div class="opp-name-badge">
+        <span class="opp-name-label">Opponent</span>
+        <span class="opp-name-val" id="opp-card-name">—</span>
+      </div>
+      <div class="opp-turn-pill your-turn" id="opp-turn-pill">
+        <span class="opp-turn-dot"></span>
+        <span id="opp-turn-text">Waiting</span>
+      </div>
+      <div class="opp-att">
+        <span class="opp-att-num" id="opp-card-att">0</span>
+        <span class="opp-att-label"> att</span>
+      </div>
+    </div>
+    <div class="opp-range">
+      <div class="opp-range-bound">
+        <span class="opp-range-num" id="opp-range-low">1</span>
+        <span class="opp-range-arrow">low</span>
+      </div>
+      <div class="opp-range-center">
+        <span class="opp-range-current" id="opp-range-current">—</span>
+        <span class="opp-range-hint" id="opp-range-hint"></span>
+      </div>
+      <div class="opp-range-bound">
+        <span class="opp-range-num" id="opp-range-high">100</span>
+        <span class="opp-range-arrow">high</span>
+      </div>
+    </div>
+    <div class="opp-chips-bar" id="opp-card-chips"></div>
   </div>
-  <div class="opp-turn-pill your-turn" id="opp-turn-pill">
-    <span class="opp-turn-dot"></span>
-    <span id="opp-turn-text">Your turn</span>
-  </div>
-  <div class="opp-stats">
-    <span class="opp-att-num" id="opp-card-att">0</span>
-    <span class="opp-att-label">attempts</span>
-  </div>
-  <div class="opp-last-wrap">
-    <span class="opp-last-label">Last guess</span>
-    <span class="opp-last-val" id="opp-card-last">—</span>
-    <div class="opp-last-hint" id="opp-card-hint"></div>
-  </div>
-  <div class="opp-chips" id="opp-card-chips"></div>
 </div>
 </div>
 
@@ -655,7 +748,7 @@ const Game = (() => {
           case 'win': [0,.12,.24,.36,.48].forEach((d,i)=>{const f=[523.25,659.25,783.99,1046.5,1318.5]; const o=c.createOscillator(),g=c.createGain(); o.type='sine'; o.frequency.setValueAtTime(f[i],now+d); g.gain.setValueAtTime(0.12,now+d); g.gain.exponentialRampToValueAtTime(0.001,now+d+0.3); o.connect(g).connect(c.destination); o.start(now+d); o.stop(now+d+0.35);}); break;
           case 'whoosh': { const bs=c.sampleRate*0.15,b=c.createBuffer(1,bs,c.sampleRate),d=b.getChannelData(0); for(let i=0;i<bs;i++) d[i]=(Math.random()*2-1)*(1-i/bs); const s=c.createBufferSource(); s.buffer=b; const g=c.createGain(),f=c.createBiquadFilter(); f.type='bandpass'; f.frequency.setValueAtTime(2000,now); f.frequency.linearRampToValueAtTime(500,now+0.15); f.Q.value=2; g.gain.setValueAtTime(0.08,now); g.gain.exponentialRampToValueAtTime(0.001,now+0.15); s.connect(f).connect(g).connect(c.destination); s.start(now); s.stop(now+0.15); break; }
           case 'click': osc('sine',1200,0.04,0.06); break;
-          case 'turn': osc('triangle',800,0.12,0.1); setTimeout(()=>osc('triangle',1000,0.1,0.08),80); break;
+          case 'turn': osc('triangle',800,0.12,0.1); break;
         }
       } catch(e){}
     }
@@ -666,13 +759,16 @@ const Game = (() => {
   const S = {
     mode:'solo', target:0, attempt:0, guesses:[], startTime:0, elapsed:0,
     timerInterval:null, playerName:'', won:false, typedValue:'', gameOver:false,
+    rangeLow:1, rangeHigh:100,
     // Multi
     peer:null, conn:null, matchId:null, oppName:'', rounds:3, currentRound:0,
     mySecret:0, oppSecret:0, iAmReady:false, oppReady:false,
     myFinalData:null, oppFinalData:null, choosingInterval:null,
     roundResults:[], oppRoundResults:[],
     // Turn-based
-    myTurn:false, iFinished:false, oppFinished:false
+    myTurn:false, iFinished:false, oppFinished:false,
+    // Opp range
+    oppRangeLow:1, oppRangeHigh:100
   };
 
   const $ = id => document.getElementById(id);
@@ -700,6 +796,78 @@ const Game = (() => {
     }
   }
 
+  // ===== RANGE UI =====
+  function resetRange() {
+    S.rangeLow = 1; S.rangeHigh = 100;
+    const rl = $('range-low'), rh = $('range-high');
+    rl.textContent = '1'; rl.className = 'range-num';
+    rh.textContent = '100'; rh.className = 'range-num';
+    $('range-low-arrow').className = 'range-arrow';
+    $('range-high-arrow').className = 'range-arrow';
+  }
+
+  function updateRange(val, isHigh) {
+    if (isHigh) {
+      if (val < S.rangeHigh) {
+        S.rangeHigh = val;
+        const el = $('range-high');
+        el.textContent = val;
+        el.className = 'range-num high updated';
+        $('range-high-arrow').className = 'range-arrow high';
+        setTimeout(()=> el.classList.remove('updated'), 400);
+      }
+    } else {
+      if (val > S.rangeLow) {
+        S.rangeLow = val;
+        const el = $('range-low');
+        el.textContent = val;
+        el.className = 'range-num low updated';
+        $('range-low-arrow').className = 'range-arrow low';
+        setTimeout(()=> el.classList.remove('updated'), 400);
+      }
+    }
+  }
+
+  // Opponent range
+  function resetOppRange() {
+    S.oppRangeLow = 1; S.oppRangeHigh = 100;
+    $('opp-range-low').textContent = '1';
+    $('opp-range-low').className = 'opp-range-num';
+    $('opp-range-high').textContent = '100';
+    $('opp-range-high').className = 'opp-range-num';
+    $('opp-range-current').textContent = '—';
+    $('opp-range-current').className = 'opp-range-current';
+    $('opp-range-hint').textContent = '';
+    $('opp-range-hint').className = 'opp-range-hint';
+  }
+
+  function updateOppRange(val, isHigh, correct) {
+    $('opp-range-current').textContent = val;
+    if (correct) {
+      $('opp-range-current').className = 'opp-range-current correct';
+      $('opp-range-hint').textContent = 'Found it!';
+      $('opp-range-hint').className = 'opp-range-hint correct';
+    } else if (isHigh) {
+      $('opp-range-current').className = 'opp-range-current high';
+      $('opp-range-hint').textContent = '↓ Too high';
+      $('opp-range-hint').className = 'opp-range-hint high';
+      if (val < S.oppRangeHigh) {
+        S.oppRangeHigh = val;
+        $('opp-range-high').textContent = val;
+        $('opp-range-high').className = 'opp-range-num high';
+      }
+    } else {
+      $('opp-range-current').className = 'opp-range-current low';
+      $('opp-range-hint').textContent = '↑ Too low';
+      $('opp-range-hint').className = 'opp-range-hint low';
+      if (val > S.oppRangeLow) {
+        S.oppRangeLow = val;
+        $('opp-range-low').textContent = val;
+        $('opp-range-low').className = 'opp-range-num low';
+      }
+    }
+  }
+
   // ===== TURN UI =====
   function updateTurnUI() {
     if (S.mode === 'solo') return;
@@ -712,21 +880,20 @@ const Game = (() => {
     if (S.iFinished) {
       tb.className = 'turn-badge opp-turn';
       tt.textContent = 'Finished';
-      $('big-number-area').style.opacity = '0.3';
+      $('range-display').style.opacity = '0.3';
       $('submit-row').style.opacity = '0.3';
       $('submit-row').style.pointerEvents = 'none';
       $('big-number-hint').textContent = 'watching opponent...';
 
-      ot.className = 'opp-turn-pill their-turn';
+      ot.className = 'opp-turn-pill ' + (S.oppFinished ? 'done' : 'their-turn');
       otxt.textContent = S.oppFinished ? 'Finished' : 'Guessing...';
-      if (S.oppFinished) ot.className = 'opp-turn-pill done';
       return;
     }
 
     if (S.myTurn) {
       tb.className = 'turn-badge my-turn';
       tt.textContent = 'Your turn';
-      $('big-number-area').style.opacity = '1';
+      $('range-display').style.opacity = '1';
       $('submit-row').style.opacity = '1';
       $('submit-row').style.pointerEvents = 'auto';
       if (!S.typedValue) $('big-number-hint').textContent = 'your turn — type a number';
@@ -736,7 +903,7 @@ const Game = (() => {
     } else {
       tb.className = 'turn-badge opp-turn';
       tt.textContent = "Opp's turn";
-      $('big-number-area').style.opacity = '0.35';
+      $('range-display').style.opacity = '0.4';
       $('submit-row').style.opacity = '0.3';
       $('submit-row').style.pointerEvents = 'none';
       S.typedValue = '';
@@ -776,7 +943,7 @@ const Game = (() => {
       else if (d.type==='INIT_ACK') { S.oppName=d.name; startChoosing(); }
       else if (d.type==='READY') { S.oppSecret=d.secret; S.oppReady=true; checkStartRound(); }
       else if (d.type==='GUESS') { handleOppGuess(d); }
-      else if (d.type==='FINISH') { S.oppFinalData=d.payload; S.oppFinished=true; updateTurnUI(); updateOppTurnUI(); checkShowResult(); }
+      else if (d.type==='FINISH') { S.oppFinalData=d.payload; S.oppFinished=true; updateTurnUI(); checkShowResult(); }
     });
   }
 
@@ -841,7 +1008,6 @@ const Game = (() => {
     S.myFinalData = null; S.oppFinalData = null;
     S.iFinished = false; S.oppFinished = false;
 
-    // Hide opp card during choosing
     document.body.classList.remove('multi-active');
 
     show('choose-screen');
@@ -880,8 +1046,10 @@ const Game = (() => {
     clearInterval(S.choosingInterval);
     S.target = S.oppSecret;
     resetGameUI();
+    resetRange();
+    resetOppRange();
 
-    // Setup turn-based: host goes first
+    // Turn-based: host goes first
     S.myTurn = (S.mode === 'host');
     S.iFinished = false;
     S.oppFinished = false;
@@ -890,10 +1058,6 @@ const Game = (() => {
     document.body.classList.add('multi-active');
     $('opp-card-name').textContent = S.oppName;
     $('opp-card-att').textContent = '0';
-    $('opp-card-last').textContent = '—';
-    $('opp-card-last').className = 'opp-last-val';
-    $('opp-card-hint').textContent = '';
-    $('opp-card-hint').className = 'opp-last-hint';
     $('opp-card-chips').innerHTML = '';
 
     const rb = $('round-badge');
@@ -906,15 +1070,10 @@ const Game = (() => {
   }
 
   function handleOppGuess(d) {
-    // Update opponent card
     $('opp-card-att').textContent = d.attempt;
-    $('opp-card-last').textContent = d.number;
+    updateOppRange(d.number, d.isHigh, d.correct);
 
     const cls = d.correct ? 'correct' : (d.isHigh ? 'high' : 'low');
-    $('opp-card-last').className = 'opp-last-val ' + cls;
-    $('opp-card-hint').className = 'opp-last-hint ' + cls;
-    $('opp-card-hint').textContent = d.correct ? 'Found it!' : (d.isHigh ? '↓ Too high' : '↑ Too low');
-
     const chip = document.createElement('div');
     chip.className = 'opp-chip ' + cls;
     chip.textContent = d.number;
@@ -923,29 +1082,9 @@ const Game = (() => {
 
     if (d.correct) {
       S.oppFinished = true;
-      updateOppTurnUI();
-      // If I haven't finished, I get uninterrupted turns now
-      if (!S.iFinished) {
-        S.myTurn = true;
-        updateTurnUI();
-        Audio.play('turn');
-      }
+      if (!S.iFinished) { S.myTurn = true; updateTurnUI(); Audio.play('turn'); }
     } else {
-      // Opponent didn't find it — it's now my turn (if I haven't finished)
-      if (!S.iFinished) {
-        S.myTurn = true;
-        updateTurnUI();
-        Audio.play('turn');
-      }
-    }
-  }
-
-  function updateOppTurnUI() {
-    const ot = $('opp-turn-pill');
-    const otxt = $('opp-turn-text');
-    if (S.oppFinished) {
-      ot.className = 'opp-turn-pill done';
-      otxt.textContent = 'Finished';
+      if (!S.iFinished) { S.myTurn = true; updateTurnUI(); Audio.play('turn'); }
     }
   }
 
@@ -965,8 +1104,14 @@ const Game = (() => {
 
   function updateBigNum() {
     const el=$('big-number'), txt=$('big-number-text'), hint=$('big-number-hint');
-    if (!S.typedValue) { txt.textContent='?'; el.classList.add('placeholder'); if(S.mode==='solo'||S.myTurn) { hint.textContent='type a number'; hint.style.opacity='1'; } }
-    else { txt.textContent=S.typedValue; el.classList.remove('placeholder'); hint.textContent='press enter'; hint.style.opacity='0.4'; el.classList.remove('num-slide-in'); void el.offsetWidth; el.classList.add('num-slide-in'); }
+    if (!S.typedValue) {
+      txt.textContent='?'; el.classList.add('placeholder');
+      if(S.mode==='solo'||S.myTurn) { hint.textContent='type a number'; hint.style.opacity='1'; }
+    } else {
+      txt.textContent=S.typedValue; el.classList.remove('placeholder');
+      hint.textContent='press enter'; hint.style.opacity='0.4';
+      el.classList.remove('num-slide-in'); void el.offsetWidth; el.classList.add('num-slide-in');
+    }
   }
 
   function clearInput() {
@@ -979,8 +1124,8 @@ const Game = (() => {
     S.attempt=0; S.guesses=[]; S.won=false; S.gameOver=false; S.elapsed=0; S.typedValue='';
     S.myFinalData=null;
     $('att-num').textContent='0'; $('game-timer').textContent='00:00';
-    $('guess-history').innerHTML=''; $('hidden-input').value='';
-    $('big-number-area').style.opacity='1';
+    $('hidden-input').value='';
+    $('range-display').style.opacity='1';
     $('submit-row').style.opacity='1'; $('submit-row').style.pointerEvents='auto';
     updateBigNum();
     $('feedback-text').textContent=''; $('feedback-text').className='feedback-text';
@@ -998,7 +1143,7 @@ const Game = (() => {
     Audio.play('click'); S.mode='solo'; S.target=rand(1,100); S.currentRound=0; S.rounds=1;
     S.roundResults=[]; S.oppRoundResults=[];
     document.body.classList.remove('multi-active');
-    resetGameUI(); show('game-screen'); startTimer();
+    resetGameUI(); resetRange(); show('game-screen'); startTimer();
   }
 
   function startMulti() {
@@ -1048,7 +1193,6 @@ const Game = (() => {
       const score = calcScore(S.attempt, S.elapsed);
       S.myFinalData = { score, attempts:S.attempt, time:S.elapsed };
 
-      addChip(val, 'correct');
       fb.textContent='Correct!'; fb.className='feedback-text correct visible';
       sub.textContent='You found it!'; sub.classList.add('visible');
       $('big-number-text').textContent=val; $('big-number').classList.remove('placeholder');
@@ -1066,11 +1210,9 @@ const Game = (() => {
         S.roundResults.push(S.myFinalData);
         updateTurnUI();
 
-        // If opponent already finished too, show results after brief delay
         if (S.oppFinished) {
           setTimeout(()=>{ $('big-number').style.color=''; checkShowResult(); }, 1600);
         } else {
-          // Stay on game screen watching opponent
           setTimeout(()=>{ $('big-number').style.color=''; }, 1600);
         }
       } else {
@@ -1079,7 +1221,9 @@ const Game = (() => {
       return;
     }
 
-    addChip(val, isHigh?'high':'low');
+    // Update range bounds
+    updateRange(val, isHigh);
+
     fb.classList.remove('visible','high','low','correct'); void fb.offsetWidth;
     fb.textContent = isHigh?'Too high':'Too low';
     fb.classList.add('visible', isHigh?'high':'low');
@@ -1093,25 +1237,12 @@ const Game = (() => {
     updateBigNum();
 
     // Turn-based: pass turn to opponent
-    if (S.mode !== 'solo') {
-      if (!S.oppFinished) {
-        S.myTurn = false;
-        updateTurnUI();
-      }
-      // If opponent already finished, I keep my turn (uninterrupted)
+    if (S.mode !== 'solo' && !S.oppFinished) {
+      S.myTurn = false;
+      updateTurnUI();
     }
 
     if (S.mode==='solo' || S.myTurn) $('hidden-input').focus();
-  }
-
-  function addChip(val, type) {
-    const c=document.createElement('div'); c.className='guess-chip '+type;
-    let arr='';
-    if(type==='high') arr='<span class="arrow">&#9660;</span>';
-    else if(type==='low') arr='<span class="arrow">&#9650;</span>';
-    c.innerHTML=val+arr;
-    $('guess-history').appendChild(c);
-    $('guess-history').scrollTop=$('guess-history').scrollHeight;
   }
 
   function flashHeat(diff) {
@@ -1143,8 +1274,6 @@ const Game = (() => {
         document.body.classList.remove('multi-active');
         renderResult();
       }
-    } else {
-      // Stay on game screen watching opponent (don't switch to wait screen)
     }
   }
 
