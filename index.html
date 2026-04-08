@@ -55,31 +55,39 @@
                 <button class="back-btn" onclick="Game.playAgain()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
                 <h2 class="setup-title">Multiplayer</h2>
                 
+                <div class="mode-tabs" style="margin-bottom: 20px; margin-top: 10px;">
+                    <button class="tab-btn active" id="tab-create" onclick="Game.setMultiMode('create')">Create Room</button>
+                    <button class="tab-btn" id="tab-join" onclick="Game.setMultiMode('join')">Join Room</button>
+                </div>
+                
                 <div class="setup-field">
                     <label>Your nickname</label>
                     <input type="text" class="game-input" id="player-name" placeholder="Nickname" maxlength="16" autocomplete="off">
                 </div>
                 
                 <div id="create-join-section" style="width: 100%; display: flex; flex-direction: column; align-items: center;">
-                    <div class="setup-field">
-                        <label>Rounds</label>
-                        <div class="round-selector" id="round-selector">
-                            <button class="round-pill" data-rounds="1" onclick="Game.setRounds(1)">1</button>
-                            <button class="round-pill active" data-rounds="3" onclick="Game.setRounds(3)">3</button>
-                            <button class="round-pill" data-rounds="5" onclick="Game.setRounds(5)">5</button>
+                    
+                    <div id="multi-create-section" style="width: 100%; display: flex; flex-direction: column; align-items: center;">
+                        <div class="setup-field">
+                            <label>Rounds</label>
+                            <div class="round-selector" id="round-selector">
+                                <button class="round-pill" data-rounds="1" onclick="Game.setRounds(1)">1</button>
+                                <button class="round-pill active" data-rounds="3" onclick="Game.setRounds(3)">3</button>
+                                <button class="round-pill" data-rounds="5" onclick="Game.setRounds(5)">5</button>
+                            </div>
+                        </div>
+                        <button class="pill-btn" id="setup-play-btn" style="max-width:280px;width:100%" disabled onclick="Game.hostPlay()">Create Room</button>
+                    </div>
+                    
+                    <div id="multi-join-section" class="hidden" style="width: 100%; display: flex; flex-direction: column; align-items: center;">
+                        <div class="join-row" style="margin-top: 10px;">
+                            <input type="text" class="game-input" id="guest-code" placeholder="ROOM CODE" maxlength="6" autocomplete="off" style="letter-spacing: 0.15em; flex: 1;">
+                            <button class="circle-btn" id="guest-play-btn" style="width: 52px; height: 52px;" disabled onclick="Game.guestPlay()">
+                                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                            </button>
                         </div>
                     </div>
-                    
-                    <button class="pill-btn" id="setup-play-btn" style="max-width:280px;width:100%" disabled onclick="Game.hostPlay()">Create Room</button>
-                    
-                    <div class="divider">or enter code</div>
-                    
-                    <div class="join-row">
-                        <input type="text" class="game-input" id="guest-code" placeholder="ROOM CODE" maxlength="6" autocomplete="off" style="letter-spacing: 0.15em; flex: 1;">
-                        <button class="circle-btn" id="guest-play-btn" style="width: 52px; height: 52px;" disabled onclick="Game.guestPlay()">
-                            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-                        </button>
-                    </div>
+
                 </div>
 
                 <div id="waiting-section" class="hidden flex-col" style="width:100%;">

@@ -1,4 +1,4 @@
-const Game = (() => {
+window.Game = (() => {
   // ===== AUDIO =====
   const SFX = (() => {
     let ctx = null, muted = false;
@@ -111,6 +111,21 @@ const Game = (() => {
     SFX.play('click');
   }
 
+  // Przełączanie zakładek w lobby Multiplayer
+  function setMultiMode(mode) {
+    $('tab-create').classList.toggle('active', mode === 'create');
+    $('tab-join').classList.toggle('active', mode === 'join');
+    
+    if (mode === 'create') {
+        $('multi-create-section').classList.remove('hidden');
+        $('multi-join-section').classList.add('hidden');
+    } else {
+        $('multi-create-section').classList.add('hidden');
+        $('multi-join-section').classList.remove('hidden');
+    }
+    SFX.play('click');
+  }
+
   // ===== RANGE UI (CLASSIC) =====
   function resetRange() {
     S.rangeLow = 0; S.rangeHigh = 100;
@@ -216,8 +231,8 @@ const Game = (() => {
     });
     $('player-name').addEventListener('keydown', e=>{ 
         if(e.key==='Enter') {
-            if (!$('guest-play-btn').disabled) guestPlay();
-            else if (!$('setup-play-btn').disabled) hostPlay();
+            if (!$('guest-play-btn').disabled && !$('multi-join-section').classList.contains('hidden')) guestPlay();
+            else if (!$('setup-play-btn').disabled && !$('multi-create-section').classList.contains('hidden')) hostPlay();
         }
     });
   }
@@ -555,6 +570,7 @@ const Game = (() => {
     $('setup-play-btn').textContent='Create Room';
     
     updateSetupButtons();
+    setMultiMode('create'); // Start on Create tab by default
     setRounds(3);
     show('setup-screen');
     setTimeout(()=>$('player-name').focus(),400);
@@ -797,5 +813,5 @@ const Game = (() => {
 
   document.addEventListener('DOMContentLoaded', init);
 
-  return { setGameType, startSolo, startMulti, setRounds, hostPlay, guestPlay, lockSecret, guess, clearInput, playAgain, toggleSound, show };
+  return { setGameType, setMultiMode, startSolo, startMulti, setRounds, hostPlay, guestPlay, lockSecret, guess, clearInput, playAgain, toggleSound, show };
 })();
