@@ -1,4 +1,12 @@
 window.Game = (() => {
+
+  const SUPABASE_URL = 'https://khrmochnfldrwynuwzrb.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtocm1vY2huZmxkcnd5bnV3enJiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2NzIzNjEsImV4cCI6MjA5MTI0ODM2MX0.RmtX0P5KysCPgdHIke2CQqeJCv1OiI7uBjVgvtpPxuI';
+
+  let supabase = null;
+  let roomChannel = null;
+  let guestJoinTimeout = null;
+
   // ===== AUDIO =====
   const SFX = (() => {
     let ctx = null, muted = false;
@@ -61,8 +69,8 @@ window.Game = (() => {
     rangeLow: 0, 
     rangeHigh: 100,
     
-    // Multi
-    peer: null, conn: null, roomCode: null, oppName: '', rounds: 3, currentRound: 0,
+    // Multi (Supabase)
+    roomCode: null, oppName: '', rounds: 3, currentRound: 0,
     mySecret: 0, oppSecret: 0, iAmReady: false, oppReady: false,
     myFinalData: null, oppFinalData: null, choosingInterval: null,
     roundResults: [], oppRoundResults: [],
@@ -231,70 +239,39 @@ window.Game = (() => {
     }
   }
 
-  // ===== INIT =====
-  function init() {
-    initTheme();
-    document.addEventListener('keydown', onKey);
-    $('game-screen').addEventListener('click', ()=>{ if(!S.gameOver && (S.mode==='solo'||S.myTurn)) $('hidden-input').focus(); });
-    $('player-name').addEventListener('input', updateSetupButtons);
-    $('guest-code').addEventListener('input', updateSetupButtons);
-    
-    // Quick enter key support for form
-    $('guest-code').addEventListener('keydown', e=>{ 
-        if(e.key==='Enter' && !$('guest-play-btn').disabled) guestPlay(); 
-    });
-    $('player-name').addEventListener('keydown', e=>{ 
-        if(e.key==='Enter') {
-            if (!$('guest-play-btn').disabled && !$('multi-join-section').classList.contains('hidden')) guestPlay();
-            else if (!$('setup-play-btn').disabled && !$('multi-create-section').classList.contains('hidden')) hostPlay();
-        }
-    });
+  // ===== SUPABASE NETWORKING =====
+  function initSupabase() {
+      if (!window.supabase) {
+          alert("Error: Supabase library not loaded.");
+          return false;
+      }
+      if (!supabase) {
+          supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+      }
+      return true;
   }
 
-  // ===== PEER =====
-  function initPeer(isHost, code) {
-    return new Promise((resolve, reject) => {
-      if (S.peer) return resolve(S.peer);
-      let peerId = isHost ? 'gtn-' + Math.floor(100000 + Math.random() * 900000) : null;
-      
-      // KONFIGURACJA STUN I TURN (METERED PUBLIC RELAY)
-      const peerConfig = {
-          config: {
-              'iceServers': [
-                  { urls: 'stun:stun.l.google.com:19302' },
-                  { urls: 'stun:stun1.l.google.com:19302' },
-                  {
-                      urls: 'turn:openrelay.metered.ca:80',
-                      username: 'openrelayproject',
-                      credential: 'openrelayproject'
-                  },
-                  {
-                      urls: 'turn:openrelay.metered.ca:443',
-                      username: 'openrelayproject',
-                      credential: 'openrelayproject'
-                  },
-                  {
-                      urls: 'turn:openrelay.metered.ca:443?transport=tcp',
-                      username: 'openrelayproject',
-                      credential: 'openrelayproject'
-                  }
-              ]
-          }
-      };
-
-      const p = peerId ? new Peer(peerId, peerConfig) : new Peer(peerConfig);
-      p.on('open', ()=>{ S.peer=p; resolve(p); });
-      p.on('error', e=>{ alert('Connection error. Check your network or try again.'); console.error(e); });
-    });
+  function sendData(payload) {
+      if (roomChannel) {
+          roomChannel.send({
+              type: 'broadcast',
+              event: 'game-action',
+              payload: payload
+          });
+      }
   }
 
-  function setupConn() {
-    S.conn.on('data', d => {
-      if (d.type==='INIT') { 
+  function handleNetworkData(d) {
+      if (d.type === 'GUEST_JOINED' && S.mode === 'host') {
+          // Zatrzymujemy timeout na czekanie gościa jeśli byśmy go mieli
+          sendData({ type:'INIT', name:S.playerName, rounds:S.rounds, gameType:S.gameType });
+      }
+      else if (d.type==='INIT') { 
+          clearTimeout(guestJoinTimeout);
           S.oppName=d.name; 
           S.rounds=d.rounds; 
-          S.gameType=d.gameType; // Host enforces rules
-          S.conn.send({type:'INIT_ACK',name:S.playerName}); 
+          S.gameType=d.gameType; 
+          sendData({type:'INIT_ACK',name:S.playerName}); 
           startChoosing(); 
       }
       else if (d.type==='INIT_ACK') { S.oppName=d.name; startChoosing(); }
@@ -312,11 +289,24 @@ window.Game = (() => {
           alert('Opponent left the room.');
           window.location.reload();
       }
-    });
+  }
+
+  // ===== INIT =====
+  function init() {
+    initTheme();
+    document.addEventListener('keydown', onKey);
+    $('game-screen').addEventListener('click', ()=>{ if(!S.gameOver && (S.mode==='solo'||S.myTurn)) $('hidden-input').focus(); });
+    $('player-name').addEventListener('input', updateSetupButtons);
+    $('guest-code').addEventListener('input', updateSetupButtons);
     
-    S.conn.on('close', () => {
-        alert('Connection lost.');
-        window.location.reload();
+    $('guest-code').addEventListener('keydown', e=>{ 
+        if(e.key==='Enter' && !$('guest-play-btn').disabled) guestPlay(); 
+    });
+    $('player-name').addEventListener('keydown', e=>{ 
+        if(e.key==='Enter') {
+            if (!$('guest-play-btn').disabled && !$('multi-join-section').classList.contains('hidden')) guestPlay();
+            else if (!$('setup-play-btn').disabled && !$('multi-create-section').classList.contains('hidden')) hostPlay();
+        }
     });
   }
 
@@ -334,32 +324,48 @@ window.Game = (() => {
     SFX.play('click');
   }
 
-  async function hostPlay() {
+  function hostPlay() {
     S.playerName = $('player-name').value.trim();
     if (!S.playerName) return;
+    
+    if (!initSupabase()) return;
+
     SFX.play('click');
     S.mode = 'host';
     $('player-name').disabled = true;
     $('create-join-section').classList.add('hidden');
     $('waiting-section').classList.remove('hidden');
 
-    await initPeer(true);
-    S.roomCode = S.peer.id.replace('gtn-', '');
+    S.roomCode = Math.floor(100000 + Math.random() * 900000).toString();
     $('room-code-display').textContent = S.roomCode;
 
-    S.peer.on('connection', c => { 
-        S.conn = c; 
-        c.on('open', () => {
-            setupConn(); 
-            c.send({ type:'INIT', name:S.playerName, rounds:S.rounds, gameType:S.gameType });
-        });
+    // Create Realtime Channel
+    roomChannel = supabase.channel(`room-${S.roomCode}`, {
+        config: { presence: { key: S.playerName } }
     });
+
+    roomChannel
+        .on('broadcast', { event: 'game-action' }, ({ payload }) => handleNetworkData(payload))
+        .on('presence', { event: 'leave' }, () => {
+             if (S.oppName && !S.gameOver) {
+                 alert('Opponent disconnected.');
+                 window.location.reload();
+             }
+        })
+        .subscribe(async (status) => {
+            if (status === 'SUBSCRIBED') {
+                await roomChannel.track({ user: 'host' });
+            }
+        });
   }
 
-  async function guestPlay() {
+  function guestPlay() {
     S.playerName = $('player-name').value.trim();
     const code = $('guest-code').value.trim();
     if (!S.playerName || code.length !== 6) return;
+    
+    if (!initSupabase()) return;
+
     SFX.play('click');
     S.mode = 'guest';
     
@@ -369,11 +375,33 @@ window.Game = (() => {
     $('player-name').disabled = true;
     $('guest-code').disabled = true;
 
-    await initPeer(false);
-    S.conn = S.peer.connect('gtn-' + code);
-    S.conn.on('open', () => {
-      setupConn();
+    S.roomCode = code;
+
+    roomChannel = supabase.channel(`room-${S.roomCode}`, {
+        config: { presence: { key: S.playerName } }
     });
+
+    roomChannel
+        .on('broadcast', { event: 'game-action' }, ({ payload }) => handleNetworkData(payload))
+        .on('presence', { event: 'leave' }, () => {
+             if (S.oppName && !S.gameOver) {
+                 alert('Opponent disconnected.');
+                 window.location.reload();
+             }
+        })
+        .subscribe(async (status) => {
+            if (status === 'SUBSCRIBED') {
+                await roomChannel.track({ user: 'guest' });
+                // Notify Host we are here
+                sendData({ type: 'GUEST_JOINED' });
+                
+                // Timeout if host doesn't reply
+                guestJoinTimeout = setTimeout(() => {
+                    alert("Room not found or Host left.");
+                    window.location.reload();
+                }, 5000);
+            }
+        });
   }
 
   // ===== CHOOSING PHASE =====
@@ -418,12 +446,12 @@ window.Game = (() => {
         v = v.substring(0,4).padStart(4, '0');
         $('secret-input').value = v;
         S.mySecretStr = v;
-        S.conn.send({ type:'READY', secretStr:S.mySecretStr });
+        sendData({ type:'READY', secretStr:S.mySecretStr });
     } else {
         let v = parseInt($('secret-input').value, 10);
         if (isNaN(v)||v<0||v>100) { v=rand(0,100); $('secret-input').value=v; }
         S.mySecret = v;
-        S.conn.send({ type:'READY', secret:S.mySecret });
+        sendData({ type:'READY', secret:S.mySecret });
     }
 
     S.iAmReady = true;
@@ -675,7 +703,7 @@ window.Game = (() => {
         S.typedValue = '';
 
         if (S.mode !== 'solo') {
-            S.conn.send({ type:'GUESS', numberStr:maskedOppStr, attempt:S.attempt, correct:isCorrect });
+            sendData({ type:'GUESS', numberStr:maskedOppStr, attempt:S.attempt, correct:isCorrect });
         }
 
         if (isCorrect) {
@@ -711,7 +739,7 @@ window.Game = (() => {
     const isHigh = val>S.target;
 
     if (S.mode !== 'solo') {
-      S.conn.send({ type:'GUESS', number:val, attempt:S.attempt, isHigh, correct:isCorrect });
+      sendData({ type:'GUESS', number:val, attempt:S.attempt, isHigh, correct:isCorrect });
     }
 
     if (isCorrect) {
@@ -762,7 +790,7 @@ window.Game = (() => {
 
       if (S.mode !== 'solo') {
         S.iFinished = true; S.myTurn = false;
-        S.conn.send({ type:'FINISH', payload:S.myFinalData });
+        sendData({ type:'FINISH', payload:S.myFinalData });
         S.roundResults.push(S.myFinalData);
         updateTurnUI();
         if (S.oppFinished) setTimeout(()=>{ checkShowResult(); }, 1600);
@@ -865,7 +893,7 @@ window.Game = (() => {
           S.iWantRematch = true;
           $('rematch-btn').textContent = 'Waiting...';
           $('rematch-btn').disabled = true;
-          S.conn.send({ type: 'REMATCH' });
+          sendData({ type: 'REMATCH' });
           if (S.oppWantsRematch) restartMatch();
       }
   }
@@ -885,8 +913,14 @@ window.Game = (() => {
       if (confirmExit) {
           if (!confirm("Are you sure you want to exit the current game?")) return;
       }
-      if (S.conn && S.conn.open) S.conn.send({ type: 'QUIT' });
-      window.location.reload();
+      sendData({ type: 'QUIT' });
+      if (roomChannel) {
+          roomChannel.unsubscribe().then(() => {
+              window.location.reload();
+          });
+      } else {
+          window.location.reload();
+      }
   }
   
   function toggleSound() { const m=SFX.toggle(); $('sound-toggle').classList.toggle('muted',m); if(!m) SFX.play('click'); }
