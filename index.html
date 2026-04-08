@@ -27,7 +27,7 @@ html, body {
 body { display: flex; align-items: center; justify-content: center; }
 
 #app-wrapper {
-  display: flex; flex-direction: column; align-items: center; gap: 16px;
+  display: flex; flex-direction: row; align-items: center; gap: 20px;
   width: 100%; height: 100%; justify-content: center;
 }
 
@@ -51,7 +51,7 @@ body { display: flex; align-items: center; justify-content: center; }
 }
 body.multi-active #opp-container { display: block; }
 @media (min-width: 768px) {
-  #opp-container { height: 340px; }
+  #opp-container { width: 320px; height: 440px; }
 }
 
 .opp-inner {
@@ -142,14 +142,22 @@ body.multi-active #opp-container { display: block; }
 
 /* Mobile opponent card */
 @media (max-width: 767px) {
+  #app-wrapper { flex-direction: column; gap: 0; }
   body.multi-active #opp-container {
-    position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
-    height: 180px; border-radius: 20px 20px 0 0;
-    border-top: 1px solid rgba(255,255,255,0.08);
-    box-shadow: 0 -10px 40px rgba(0,0,0,0.5);
+    position: fixed; top: 0; right: 0; z-index: 200;
+    width: 160px; height: auto; max-height: 55vh;
+    border-radius: 0 0 0 16px; padding: 0;
+    box-shadow: -4px 4px 20px rgba(0,0,0,0.5);
+    border-left: 1px solid rgba(255,255,255,0.06);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
   }
-  body.multi-active #opp-container .opp-inner { padding: 14px 20px; }
-  body.multi-active #game-container { height: calc(100% - 180px); }
+  body.multi-active #opp-container .opp-inner { padding: 12px 10px; }
+  body.multi-active #opp-container .opp-name-val { font-size: 14px; }
+  body.multi-active #opp-container .opp-att-num { font-size: 18px; }
+  body.multi-active #opp-container .opp-range-num { font-size: 24px; }
+  body.multi-active #opp-container .opp-range-current { font-size: 28px; }
+  body.multi-active #opp-container .opp-stats-bar { margin-bottom: 4px; }
+  body.multi-active #opp-container .opp-turn-pill { height: 22px; padding: 0 8px; font-size: 9px; margin-bottom: 8px; }
 }
 
 /* --- Screens --- */
@@ -712,7 +720,7 @@ body.multi-active #opp-container { display: block; }
 <script>
 const Game = (() => {
   // ===== AUDIO =====
-  const Audio = (() => {
+  const SFX = (() => {
     let ctx = null, muted = false;
     function ensure() {
       if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -774,7 +782,7 @@ const Game = (() => {
   const $ = id => document.getElementById(id);
 
   function show(id) {
-    Audio.play('whoosh');
+    SFX.play('whoosh');
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     $(id).classList.add('active');
     if (id === 'game-screen') $('hidden-input').focus();
@@ -951,7 +959,7 @@ const Game = (() => {
   function setRounds(n) {
     S.rounds = n;
     document.querySelectorAll('.round-pill').forEach(b => b.classList.toggle('active', +b.dataset.rounds===n));
-    Audio.play('click');
+    SFX.play('click');
   }
 
   function onHostInput() {
@@ -961,7 +969,7 @@ const Game = (() => {
   async function hostPlay() {
     S.playerName = $('host-name').value.trim();
     if (!S.playerName) return;
-    Audio.play('click');
+    SFX.play('click');
     S.mode = 'host';
     $('setup-play-btn').textContent = 'Creating...';
     $('setup-play-btn').disabled = true;
@@ -980,7 +988,7 @@ const Game = (() => {
   async function guestPlay() {
     S.playerName = $('guest-name').value.trim();
     if (!S.playerName) return;
-    Audio.play('click');
+    SFX.play('click');
     $('guest-play-btn').textContent = 'Connecting...';
     $('guest-play-btn').disabled = true;
     $('guest-name').disabled = true;
@@ -994,7 +1002,7 @@ const Game = (() => {
   }
 
   function copyLink() {
-    Audio.play('click');
+    SFX.play('click');
     navigator.clipboard.writeText($('link-display').textContent).then(()=>{
       $('copy-btn').textContent='Copied!'; $('copy-btn').classList.add('copied');
       setTimeout(()=>{ $('copy-btn').textContent='Copy'; $('copy-btn').classList.remove('copied'); },2000);
@@ -1031,7 +1039,7 @@ const Game = (() => {
     if (S.iAmReady) return;
     let v = parseInt($('secret-input').value, 10);
     if (isNaN(v)||v<1||v>100) { v=rand(1,100); $('secret-input').value=v; }
-    Audio.play('click');
+    SFX.play('click');
     S.mySecret = v;
     S.iAmReady = true;
     $('secret-input').disabled = true;
@@ -1082,9 +1090,9 @@ const Game = (() => {
 
     if (d.correct) {
       S.oppFinished = true;
-      if (!S.iFinished) { S.myTurn = true; updateTurnUI(); Audio.play('turn'); }
+      if (!S.iFinished) { S.myTurn = true; updateTurnUI(); SFX.play('turn'); }
     } else {
-      if (!S.iFinished) { S.myTurn = true; updateTurnUI(); Audio.play('turn'); }
+      if (!S.iFinished) { S.myTurn = true; updateTurnUI(); SFX.play('turn'); }
     }
   }
 
@@ -1096,8 +1104,8 @@ const Game = (() => {
     if (S.mode !== 'solo' && !S.myTurn) return;
     if (S.mode !== 'solo' && S.iFinished) return;
 
-    if (e.key >= '0' && e.key <= '9') { e.preventDefault(); if(S.typedValue.length<3){ S.typedValue+=e.key; Audio.play('type'); updateBigNum(); } }
-    else if (e.key==='Backspace') { e.preventDefault(); if(S.typedValue.length>0){ S.typedValue=S.typedValue.slice(0,-1); Audio.play('delete'); updateBigNum(); } }
+    if (e.key >= '0' && e.key <= '9') { e.preventDefault(); if(S.typedValue.length<3){ S.typedValue+=e.key; SFX.play('type'); updateBigNum(); } }
+    else if (e.key==='Backspace') { e.preventDefault(); if(S.typedValue.length>0){ S.typedValue=S.typedValue.slice(0,-1); SFX.play('delete'); updateBigNum(); } }
     else if (e.key==='Enter') { e.preventDefault(); guess(); }
     else if (e.key==='Escape') { e.preventDefault(); clearInput(); }
   }
@@ -1116,7 +1124,7 @@ const Game = (() => {
 
   function clearInput() {
     if (S.mode !== 'solo' && !S.myTurn) return;
-    S.typedValue=''; Audio.play('delete'); updateBigNum();
+    S.typedValue=''; SFX.play('delete'); updateBigNum();
   }
 
   // ===== GAME =====
@@ -1140,14 +1148,14 @@ const Game = (() => {
   }
 
   function startSolo() {
-    Audio.play('click'); S.mode='solo'; S.target=rand(1,100); S.currentRound=0; S.rounds=1;
+    SFX.play('click'); S.mode='solo'; S.target=rand(1,100); S.currentRound=0; S.rounds=1;
     S.roundResults=[]; S.oppRoundResults=[];
     document.body.classList.remove('multi-active');
     resetGameUI(); resetRange(); show('game-screen'); startTimer();
   }
 
   function startMulti() {
-    Audio.play('click'); S.mode='host';
+    SFX.play('click'); S.mode='host';
     S.currentRound=0; S.roundResults=[]; S.oppRoundResults=[];
     $('host-name').value=''; $('host-name').disabled=false;
     $('link-box').classList.add('hidden');
@@ -1167,11 +1175,11 @@ const Game = (() => {
     if (isNaN(val)||val<1||val>100) {
       $('game-container').classList.remove('earthquake'); void $('game-container').offsetWidth;
       $('game-container').classList.add('earthquake'); setTimeout(()=>$('game-container').classList.remove('earthquake'),500);
-      Audio.play('tick'); return;
+      SFX.play('tick'); return;
     }
     if (S.gameOver && S.mode==='solo') return;
 
-    Audio.play('submit');
+    SFX.play('submit');
     S.attempt++; S.guesses.push(val); S.typedValue='';
 
     const an=$('att-num'); an.textContent=S.attempt; an.classList.remove('bump'); void an.offsetWidth; an.classList.add('bump');
@@ -1198,7 +1206,7 @@ const Game = (() => {
       $('big-number-text').textContent=val; $('big-number').classList.remove('placeholder');
       $('big-number').style.color='#51cf66'; $('big-number-hint').textContent='';
 
-      Audio.play('win');
+      SFX.play('win');
       $('game-container').classList.add('celebrate'); setTimeout(()=>$('game-container').classList.remove('celebrate'),700);
       const r=$('big-number').getBoundingClientRect(), cr=$('game-container').getBoundingClientRect();
       burst(r.left-cr.left+r.width/2, r.top-cr.top+r.height/2, 20, ['#51cf66','#94d82d','#ffd43b','#4dabf7','#cc5de8','#ff6b6b']);
@@ -1227,7 +1235,7 @@ const Game = (() => {
     fb.classList.remove('visible','high','low','correct'); void fb.offsetWidth;
     fb.textContent = isHigh?'Too high':'Too low';
     fb.classList.add('visible', isHigh?'high':'low');
-    Audio.play(isHigh?'high':'low');
+    SFX.play(isHigh?'high':'low');
 
     let ht='';
     if(diff<=3) ht='Burning hot!'; else if(diff<=8) ht='Very warm'; else if(diff<=20) ht='Getting warmer'; else if(diff<=40) ht='Cold'; else ht='Freezing cold';
@@ -1315,7 +1323,7 @@ const Game = (() => {
       else $('vs-winner').textContent="It's a tie!";
     }
 
-    Audio.play('tick');
+    SFX.play('tick');
     show('result-screen');
   }
 
@@ -1328,7 +1336,7 @@ const Game = (() => {
   }
 
   function playAgain() { document.body.classList.remove('multi-active'); window.location.search=''; }
-  function toggleSound() { const m=Audio.toggle(); $('sound-toggle').classList.toggle('muted',m); if(!m) Audio.play('click'); }
+  function toggleSound() { const m=SFX.toggle(); $('sound-toggle').classList.toggle('muted',m); if(!m) SFX.play('click'); }
 
   document.addEventListener('DOMContentLoaded', init);
 
