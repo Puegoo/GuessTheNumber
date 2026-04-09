@@ -1,6 +1,6 @@
 window.Game = (() => {
 
-  const VERSION = 'v2026.04.09 · 0e9a66b';
+  const VERSION = 'v2026.04.09 · fc944c5';
 
   const SUPABASE_URL = 'https://khrmochnfldrwynuwzrb.supabase.co';
   const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtocm1vY2huZmxkcnd5bnV3enJiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2NzIzNjEsImV4cCI6MjA5MTI0ODM2MX0.RmtX0P5KysCPgdHIke2CQqeJCv1OiI7uBjVgvtpPxuI';
@@ -344,9 +344,10 @@ window.Game = (() => {
           S.oppReady=true; checkStartRound();
       }
       else if (d.type==='START') {
-          // Guest receives host's START — set the target and launch
           clearInterval(S.choosingInterval);
-          if (S.gameType==='digits') S.targetStr=d.guestTarget; else S.target=d.guestTarget;
+          if (S.gameType === 'digits')   S.targetStr = d.guestTarget;
+          else if (S.gameType === 'hotcold') S.target = d.sharedTarget; // same number for both
+          else                           S.target = d.guestTarget;
           _launchRound();
       }
       else if (d.type==='GUESS') { handleOppGuess(d); }
@@ -492,6 +493,15 @@ window.Game = (() => {
     S.iFinished = false; S.oppFinished = false;
 
     document.body.classList.remove('multi-active');
+
+    // Hot & Cold multi: system picks a shared random target — skip choose screen entirely
+    if (S.gameType === 'hotcold') {
+      S.iAmReady = true;
+      sendData({ type: 'READY', secret: 0 }); // dummy value, target decided by host
+      checkStartRound();
+      return;
+    }
+
     show('choose-screen');
     $('choose-status').innerHTML = `Round ${S.currentRound}/${S.rounds} vs <b>${S.oppName}</b>`;
     
@@ -555,6 +565,11 @@ window.Game = (() => {
       if (S.gameType === 'digits') {
         S.targetStr = S.oppSecretStr;
         sendData({ type: 'START', guestTarget: S.mySecretStr });
+      } else if (S.gameType === 'hotcold') {
+        // System picks one shared target for both players
+        const sharedTarget = rand(0, 100);
+        S.target = sharedTarget;
+        sendData({ type: 'START', sharedTarget });
       } else {
         S.target = S.oppSecret;
         sendData({ type: 'START', guestTarget: S.mySecret });
@@ -743,7 +758,7 @@ window.Game = (() => {
     if (S.gameType === 'digits') {
         $('bound-low-container').style.visibility = 'hidden';
         $('bound-high-container').style.visibility = 'hidden';
-        $('history-container').classList.remove('hidden');
+        $('history-container').classList.add('hidden');
         $('history-container').innerHTML = '';
     } else if (S.gameType === 'hotcold') {
         $('bound-low-container').style.visibility = 'hidden';
@@ -877,11 +892,6 @@ window.Game = (() => {
             updateBigNum(); S.newlyLocked = null;
             handleWin(guessArr.join(''));
         } else {
-            const hist = document.createElement('div');
-            hist.className = 'history-item drop-anim';
-            hist.innerHTML = guessArr.map((c, i) => `<span class="${newKnown[i] !== null ? 'correct' : ''}">${c}</span>`).join('');
-            $('history-container').prepend(hist);
-
             SFX.play('low');
             updateBigNum(); S.newlyLocked = null;
 
