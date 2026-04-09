@@ -361,6 +361,59 @@ body.multi-active #opp-container { display: block; }
 .hidden { display: none !important; }
 .flex-col { display: flex; flex-direction: column; align-items: center; }
 
+/* ===== CUSTOM MODAL ===== */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 9999;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: modalFadeIn 0.2s ease forwards;
+}
+.modal-overlay.hidden { display: none !important; }
+@keyframes modalFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.modal-box {
+  background: #111;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 20px;
+  padding: 28px 28px 20px;
+  max-width: 320px;
+  width: calc(100% - 48px);
+  box-shadow: 0 8px 40px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.4);
+  animation: modalSlideUp 0.25s cubic-bezier(0.16,1,0.3,1) forwards;
+}
+.light-mode .modal-box {
+  background: #f5f5f5;
+  border-color: rgba(0,0,0,0.1);
+  box-shadow: 0 8px 40px rgba(0,0,0,0.2), 0 2px 8px rgba(0,0,0,0.1);
+}
+@keyframes modalSlideUp {
+  from { transform: translateY(16px) scale(0.97); opacity: 0; }
+  to   { transform: translateY(0)     scale(1);    opacity: 1; }
+}
+.modal-message {
+  font-size: 15px; font-weight: 500; color: rgba(255,255,255,0.85);
+  line-height: 1.55; text-align: center; margin-bottom: 20px;
+}
+.light-mode .modal-message { color: rgba(0,0,0,0.8); }
+.modal-actions {
+  display: flex; gap: 10px; justify-content: center;
+}
+.modal-btn {
+  flex: 1; height: 44px; border-radius: 44px;
+  border: none; font-family: inherit; font-size: 14px; font-weight: 600;
+  cursor: pointer; transition: transform 0.2s cubic-bezier(0.34,1.56,0.64,1), opacity 0.15s;
+}
+.modal-btn:active { transform: scale(0.95); }
+.modal-btn.primary { background: #fff; color: #000; }
+.light-mode .modal-btn.primary { background: #000; color: #fff; }
+.modal-btn.secondary { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.6); }
+.light-mode .modal-btn.secondary { background: rgba(0,0,0,0.07); color: rgba(0,0,0,0.5); }
+.modal-btn.danger { background: rgba(255,107,107,0.15); color: #ff6b6b; border: 1px solid rgba(255,107,107,0.25); }
+
 @media (max-height: 650px) {
     .screen { padding: 16px 12px; }
     .logo-title { font-size: 48px; }

@@ -86,6 +86,35 @@ window.Game = (() => {
 
   const $ = id => document.getElementById(id);
 
+  // ===== MODAL =====
+  function showModal(message, buttons) {
+    $('modal-message').textContent = message;
+    const actions = $('modal-actions');
+    actions.innerHTML = '';
+    buttons.forEach(({ label, className, onClick }) => {
+      const btn = document.createElement('button');
+      btn.className = 'modal-btn ' + (className || 'primary');
+      btn.textContent = label;
+      btn.onclick = () => {
+        $('modal-overlay').classList.add('hidden');
+        if (onClick) onClick();
+      };
+      actions.appendChild(btn);
+    });
+    $('modal-overlay').classList.remove('hidden');
+  }
+
+  function showAlert(message, onClose) {
+    showModal(message, [{ label: 'OK', className: 'primary', onClick: onClose }]);
+  }
+
+  function showConfirm(message, onConfirm, onCancel) {
+    showModal(message, [
+      { label: 'Cancel', className: 'secondary', onClick: onCancel },
+      { label: 'Confirm', className: 'danger',   onClick: onConfirm },
+    ]);
+  }
+
   function show(id) {
     SFX.play('whoosh');
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -248,7 +277,7 @@ window.Game = (() => {
   // ===== SUPABASE NETWORKING =====
   function initSupabase() {
       if (!window.supabase) {
-          alert("Error: Supabase library not loaded.");
+          showAlert("Error: Supabase library not loaded.");
           return false;
       }
       if (!supabase) {
@@ -292,8 +321,7 @@ window.Game = (() => {
           if (S.iWantRematch) restartMatch();
       }
       else if (d.type==='QUIT') {
-          alert('Opponent left the room.');
-          window.location.reload();
+          showAlert('Opponent left the room.', () => window.location.reload());
       }
   }
 
@@ -360,8 +388,7 @@ window.Game = (() => {
         .on('broadcast', { event: 'game-action' }, ({ payload }) => handleNetworkData(payload))
         .on('presence', { event: 'leave' }, () => {
              if (S.oppName && !S.gameOver) {
-                 alert('Opponent disconnected.');
-                 window.location.reload();
+                 showAlert('Opponent disconnected.', () => window.location.reload());
              }
         })
         .subscribe(async (status) => {
@@ -397,8 +424,7 @@ window.Game = (() => {
         .on('broadcast', { event: 'game-action' }, ({ payload }) => handleNetworkData(payload))
         .on('presence', { event: 'leave' }, () => {
              if (S.oppName && !S.gameOver) {
-                 alert('Opponent disconnected.');
-                 window.location.reload();
+                 showAlert('Opponent disconnected.', () => window.location.reload());
              }
         })
         .subscribe(async (status) => {
@@ -950,18 +976,23 @@ window.Game = (() => {
       startChoosing();
   }
   
-  function quitToMenu(confirmExit = false) {
-      if (confirmExit) {
-          if (!confirm("Are you sure you want to exit the current game?")) return;
-      }
-      sendData({ type: 'QUIT' });
+  function _doQuit() {
       if (roomChannel) {
-          roomChannel.unsubscribe().then(() => {
-              window.location.reload();
-          });
+          roomChannel.unsubscribe().then(() => window.location.reload());
       } else {
           window.location.reload();
       }
+  }
+
+  function quitToMenu(confirmExit = false) {
+      if (confirmExit) {
+          showConfirm(
+              'Are you sure you want to exit the current game?',
+              () => { sendData({ type: 'QUIT' }); _doQuit(); },
+          );
+          return;
+      }
+      sendData({ type: 'QUIT' }); _doQuit();
   }
   
   function toggleSound() { const m=SFX.toggle(); $('sound-toggle').classList.toggle('muted',m); if(!m) SFX.play('click'); }
