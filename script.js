@@ -308,9 +308,15 @@ window.Game = (() => {
           startChoosing(); 
       }
       else if (d.type==='INIT_ACK') { S.oppName=d.name; startChoosing(); }
-      else if (d.type==='READY') { 
-          if(S.gameType==='digits') S.oppSecretStr=d.secretStr; else S.oppSecret=d.secret; 
-          S.oppReady=true; checkStartRound(); 
+      else if (d.type==='READY') {
+          if(S.gameType==='digits') S.oppSecretStr=d.secretStr; else S.oppSecret=d.secret;
+          S.oppReady=true; checkStartRound();
+      }
+      else if (d.type==='START') {
+          // Guest receives host's START — set the target and launch
+          clearInterval(S.choosingInterval);
+          if (S.gameType==='digits') S.targetStr=d.guestTarget; else S.target=d.guestTarget;
+          _launchRound();
       }
       else if (d.type==='GUESS') { handleOppGuess(d); }
       else if (d.type==='FINISH') { S.oppFinalData=d.payload; S.oppFinished=true; updateTurnUI(); checkShowResult(); }
@@ -511,13 +517,22 @@ window.Game = (() => {
   function checkStartRound() {
     if (!S.iAmReady || !S.oppReady) return;
     clearInterval(S.choosingInterval);
-    
-    if (S.gameType === 'digits') {
+
+    // Only the HOST drives the round start — tells the guest what to guess
+    if (S.mode === 'host') {
+      if (S.gameType === 'digits') {
         S.targetStr = S.oppSecretStr;
-    } else {
+        sendData({ type: 'START', guestTarget: S.mySecretStr });
+      } else {
         S.target = S.oppSecret;
+        sendData({ type: 'START', guestTarget: S.mySecret });
+      }
+      _launchRound();
     }
-    
+    // Guest waits for the START message — see handleNetworkData
+  }
+
+  function _launchRound() {
     resetGameUI();
     resetRange();
     resetOppRange();

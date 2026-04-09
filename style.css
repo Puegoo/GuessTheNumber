@@ -303,11 +303,20 @@ body.multi-active #opp-container { display: block; }
               0 30px 90px rgba(0,0,0,0.35), 0 10px 35px rgba(0,0,0,0.2);
   transition: box-shadow 0.35s ease;
 }
-/* Light mode: dark border + strong drop shadow for contrast against white bg */
+/* Light mode: spinning rainbow ring (matches Challenge button palette) */
+@keyframes rainbowRing {
+  0%   { box-shadow: 0 0 0 3px #ff0040, 0 0 18px 4px rgba(255,0,64,0.35),   0 20px 50px rgba(0,0,0,0.2); }
+  14%  { box-shadow: 0 0 0 3px #ff8000, 0 0 18px 4px rgba(255,128,0,0.35),  0 20px 50px rgba(0,0,0,0.2); }
+  28%  { box-shadow: 0 0 0 3px #ffe600, 0 0 18px 4px rgba(255,230,0,0.35),  0 20px 50px rgba(0,0,0,0.2); }
+  42%  { box-shadow: 0 0 0 3px #00ff88, 0 0 18px 4px rgba(0,255,136,0.35),  0 20px 50px rgba(0,0,0,0.2); }
+  57%  { box-shadow: 0 0 0 3px #00ccff, 0 0 18px 4px rgba(0,204,255,0.35),  0 20px 50px rgba(0,0,0,0.2); }
+  71%  { box-shadow: 0 0 0 3px #8000ff, 0 0 18px 4px rgba(128,0,255,0.35),  0 20px 50px rgba(0,0,0,0.2); }
+  85%  { box-shadow: 0 0 0 3px #ff0080, 0 0 18px 4px rgba(255,0,128,0.35),  0 20px 50px rgba(0,0,0,0.2); }
+  100% { box-shadow: 0 0 0 3px #ff0040, 0 0 18px 4px rgba(255,0,64,0.35),   0 20px 50px rgba(0,0,0,0.2); }
+}
 .light-mode #game-container.my-turn-active {
-  box-shadow: 0 0 0 3px rgba(0,0,0,0.75),
-              0 20px 50px rgba(0,0,0,0.35), 0 8px 20px rgba(0,0,0,0.2);
-  transition: box-shadow 0.35s ease;
+  animation: rainbowRing 3s linear infinite;
+  transition: none;
 }
 
 /* Opponent card active state */
@@ -317,8 +326,13 @@ body.multi-active #opp-container { display: block; }
               0 30px 90px rgba(0,0,0,0.35), 0 10px 35px rgba(0,0,0,0.2);
 }
 .light-mode #opp-container.opp-turn-active {
-  box-shadow: 0 0 0 3px rgba(0,0,0,0.75),
-              0 20px 50px rgba(0,0,0,0.35), 0 8px 20px rgba(0,0,0,0.2);
+  animation: rainbowRing 3s linear infinite;
+  transition: none;
+}
+/* In light mode, skip the entrance pulse — rainbow ring takes over immediately */
+.light-mode #game-container.turn-pulse,
+.light-mode #opp-container.opp-turn-pulse {
+  animation: rainbowRing 3s linear infinite;
 }
 @keyframes oppTurnPulse {
   0%   { box-shadow: 0 0 0 0px rgba(255,255,255,0.0), 0 30px 90px rgba(0,0,0,0.35), 0 10px 35px rgba(0,0,0,0.2); }
