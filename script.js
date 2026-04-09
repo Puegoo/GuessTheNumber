@@ -1,6 +1,6 @@
 window.Game = (() => {
 
-  const VERSION = 'v2026.04.09 · 957430b';
+  const VERSION = 'v2026.04.09 · 82408b1';
 
   const SUPABASE_URL = 'https://khrmochnfldrwynuwzrb.supabase.co';
   const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtocm1vY2huZmxkcnd5bnV3enJiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2NzIzNjEsImV4cCI6MjA5MTI0ODM2MX0.RmtX0P5KysCPgdHIke2CQqeJCv1OiI7uBjVgvtpPxuI';
@@ -643,28 +643,29 @@ window.Game = (() => {
   function handleOppGuess(d) {
     $('opp-card-att').textContent = d.attempt;
 
-    const chip = document.createElement('div');
-    if (S.gameType === 'digits') {
-        updateOppRange(d.numberStr, false, d.correct);
-        chip.className = 'opp-chip digits ' + (d.correct ? 'correct' : '');
-        chip.textContent = d.numberStr;
-    } else if (S.gameType === 'hotcold') {
-        const cls = d.correct ? 'correct' : (d.tempCls || '');
-        chip.className = 'opp-chip ' + cls;
-        chip.textContent = d.correct ? `${d.number} ✓` : `${d.number} · ${d.tempLabel || ''}`;
-        $('opp-range-current').textContent = d.number;
-        $('opp-range-current').className = 'opp-range-current' + (d.correct ? ' correct' : (d.tempCls ? ` ${d.tempCls}` : ''));
-        $('opp-range-hint').textContent = d.correct ? 'Found it!' : (d.tempLabel || '');
-        $('opp-range-hint').className = 'opp-range-hint' + (d.correct ? ' correct' : (d.tempCls ? ` ${d.tempCls}` : ''));
+    if (S.gameType === 'hotcold') {
+        // Don't reveal opponent's guesses or temperatures — only show when they win
+        if (d.correct) {
+            $('opp-range-current').textContent = '✓';
+            $('opp-range-current').className = 'opp-range-current correct';
+            $('opp-range-hint').textContent = 'Found it!';
+            $('opp-range-hint').className = 'opp-range-hint correct';
+        }
     } else {
-        updateOppRange(d.number, d.isHigh, d.correct);
-        const cls = d.correct ? 'correct' : (d.isHigh ? 'high' : 'low');
-        chip.className = 'opp-chip ' + cls;
-        chip.textContent = d.number;
+        const chip = document.createElement('div');
+        if (S.gameType === 'digits') {
+            updateOppRange(d.numberStr, false, d.correct);
+            chip.className = 'opp-chip digits ' + (d.correct ? 'correct' : '');
+            chip.textContent = d.numberStr;
+        } else {
+            updateOppRange(d.number, d.isHigh, d.correct);
+            const cls = d.correct ? 'correct' : (d.isHigh ? 'high' : 'low');
+            chip.className = 'opp-chip ' + cls;
+            chip.textContent = d.number;
+        }
+        $('opp-card-chips').appendChild(chip);
+        $('opp-card-chips').scrollTop = $('opp-card-chips').scrollHeight;
     }
-
-    $('opp-card-chips').appendChild(chip);
-    $('opp-card-chips').scrollTop = $('opp-card-chips').scrollHeight;
 
     if (d.correct) {
       S.oppFinished = true;
