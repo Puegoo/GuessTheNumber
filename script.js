@@ -216,11 +216,13 @@ window.Game = (() => {
     const tb = $('turn-badge'), tt = $('turn-text'), ot = $('opp-turn-pill'), otxt = $('opp-turn-text');
     tb.classList.remove('hidden');
 
+    const gc = $('game-container');
+
     if (S.iFinished) {
       tb.className = 'turn-badge opp-turn'; tt.textContent = 'Finished';
-      $('main-display').style.opacity = '0.3'; 
+      $('main-display').style.opacity = '0.3';
       $('submit-row').style.opacity = '0.3'; $('submit-row').style.pointerEvents = 'none';
-      
+      gc.classList.remove('my-turn-active', 'turn-pulse');
       ot.className = 'opp-turn-pill ' + (S.oppFinished ? 'done' : 'their-turn');
       otxt.textContent = S.oppFinished ? 'Finished' : 'Guessing...';
       return;
@@ -231,14 +233,15 @@ window.Game = (() => {
       $('main-display').style.opacity = '1';
       $('submit-row').style.opacity = '1'; $('submit-row').style.pointerEvents = 'auto';
       ot.className = 'opp-turn-pill your-turn'; otxt.textContent = 'Waiting';
-      const gc = $('game-container');
       gc.classList.remove('turn-pulse'); void gc.offsetWidth; gc.classList.add('turn-pulse');
+      gc.classList.add('my-turn-active');
     } else {
       tb.className = 'turn-badge opp-turn'; tt.textContent = "Opp's turn";
       $('main-display').style.opacity = '0.4';
       $('submit-row').style.opacity = '0.3'; $('submit-row').style.pointerEvents = 'none';
       S.typedValue = ''; updateBigNum();
       ot.className = 'opp-turn-pill their-turn'; otxt.textContent = 'Guessing...';
+      gc.classList.remove('my-turn-active');
     }
   }
 
@@ -613,9 +616,11 @@ window.Game = (() => {
   // ===== GAME PLAY =====
   function resetGameUI() {
     S.attempt=0; S.won=false; S.gameOver=false; S.elapsed=0; S.typedValue=''; S.myFinalData=null;
-    S.knownDigits = [null, null, null, null];
+    S.knownDigits = [null, null, null, null]; S.newlyLocked = null;
     $('att-num').textContent='0'; $('game-timer').textContent='00:00';
     $('hidden-input').value='';
+    $('big-number').style.color = '';
+    $('cursor-blink').style.display = '';
     
     if (S.gameType === 'digits') {
         $('bound-low-container').style.visibility = 'hidden';
@@ -635,6 +640,7 @@ window.Game = (() => {
     $('feedback-text').textContent=''; $('feedback-text').className='feedback-text';
     $('feedback-sub').textContent=''; $('feedback-sub').classList.remove('visible');
     $('turn-badge').classList.add('hidden');
+    $('game-container').classList.remove('my-turn-active', 'turn-pulse');
     clearInterval(S.timerInterval);
   }
 

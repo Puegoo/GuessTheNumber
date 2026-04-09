@@ -42,7 +42,7 @@ body { display: flex; align-items: center; justify-content: center; }
 
 @media (min-width: 768px) {
   .card-base {
-    width: 560px; height: 440px; border-radius: 20px; flex-shrink: 0;
+    width: 560px; height: 490px; border-radius: 20px; flex-shrink: 0;
   }
 }
 
@@ -95,7 +95,7 @@ body { display: flex; align-items: center; justify-content: center; }
 /* --- Opponent Card (multiplayer) --- */
 #opp-container { display: none; background: #000; overflow: hidden; }
 body.multi-active #opp-container { display: block; }
-@media (min-width: 768px) { #opp-container { width: 320px; height: 440px; } }
+@media (min-width: 768px) { #opp-container { width: 320px; height: 490px; } }
 
 .opp-inner { display: flex; flex-direction: column; align-items: center; padding: 24px 28px; height: 100%; }
 .opp-header-bar { width: 100%; display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
@@ -303,11 +303,20 @@ body.multi-active #opp-container { display: block; }
 .celebrate { animation: celebrate 0.7s ease-out; }
 
 @keyframes turnPulse {
-  0%   { box-shadow: 0 0 0 0px rgba(81,207,102,0.0), 0 0 0 1px rgba(0,0,0,0.08), 0 30px 90px rgba(0,0,0,0.35), 0 10px 35px rgba(0,0,0,0.2); }
-  25%  { box-shadow: 0 0 0 4px rgba(81,207,102,0.55), 0 0 0 1px rgba(0,0,0,0.08), 0 30px 90px rgba(0,0,0,0.35), 0 10px 35px rgba(0,0,0,0.2); }
-  100% { box-shadow: 0 0 0 0px rgba(81,207,102,0.0), 0 0 0 1px rgba(0,0,0,0.08), 0 30px 90px rgba(0,0,0,0.35), 0 10px 35px rgba(0,0,0,0.2); }
+  0%   { box-shadow: 0 0 0 0px rgba(255,255,255,0.0), 0 0 0 1px rgba(0,0,0,0.08), 0 30px 90px rgba(0,0,0,0.35), 0 10px 35px rgba(0,0,0,0.2); }
+  30%  { box-shadow: 0 0 0 5px rgba(255,255,255,0.55), 0 0 28px 6px rgba(255,255,255,0.12), 0 0 0 1px rgba(0,0,0,0.08), 0 30px 90px rgba(0,0,0,0.35), 0 10px 35px rgba(0,0,0,0.2); }
+  100% { box-shadow: 0 0 0 0px rgba(255,255,255,0.0), 0 0 0 1px rgba(0,0,0,0.08), 0 30px 90px rgba(0,0,0,0.35), 0 10px 35px rgba(0,0,0,0.2); }
 }
-#game-container.turn-pulse { animation: turnPulse 0.7s ease-out 2; }
+#game-container.turn-pulse { animation: turnPulse 0.65s ease-out 2; }
+
+/* Persistent your-turn glow while input is active */
+#game-container.my-turn-active {
+  box-shadow: 0 0 0 3px rgba(255,255,255,0.35), 0 0 24px 4px rgba(255,255,255,0.08), 0 0 0 1px rgba(0,0,0,0.08), 0 30px 90px rgba(0,0,0,0.35), 0 10px 35px rgba(0,0,0,0.2);
+  transition: box-shadow 0.4s ease;
+}
+.light-mode #game-container.my-turn-active {
+  box-shadow: 0 0 0 3px rgba(0,0,0,0.55), 0 0 24px 4px rgba(0,0,0,0.1), 0 0 0 1px rgba(0,0,0,0.08), 0 30px 90px rgba(0,0,0,0.35), 0 10px 35px rgba(0,0,0,0.2);
+}
 
 @keyframes digitLock {
   0%   { transform: scale(1);    color: #51cf66; text-shadow: none; }
@@ -352,7 +361,7 @@ body.multi-active #opp-container { display: block; }
 .hidden { display: none !important; }
 .flex-col { display: flex; flex-direction: column; align-items: center; }
 
-@media (max-height: 600px) {
+@media (max-height: 650px) {
     .screen { padding: 16px 12px; }
     .logo-title { font-size: 48px; }
     .intro-desc { margin-bottom: 12px; }
