@@ -11,6 +11,21 @@
 </head>
 <body>
     <div id="app-wrapper">
+
+        <!-- Hot & Cold history side panel (shown only in hotcold mode) -->
+        <div id="hc-container" class="card-base">
+            <div class="hc-inner">
+                <div class="hc-header-bar">
+                    <span class="hc-header-label">History</span>
+                    <div class="hc-att-wrap">
+                        <span class="hc-att-num" id="hc-att-num">0</span>
+                        <span class="hc-att-label">att</span>
+                    </div>
+                </div>
+                <div class="hc-list" id="hc-list"></div>
+            </div>
+        </div>
+
         <div id="game-container" class="card-base">
             <div class="heat-flash" id="heat-flash"></div>
             <div class="particle-container" id="particles"></div>
@@ -34,9 +49,21 @@
                     </div>
                 </div>
                 
-                <div class="mode-tabs">
-                    <button class="tab-btn active" id="tab-classic" onclick="Game.setGameType('classic')">Classic (0-100)</button>
-                    <button class="tab-btn" id="tab-digits" onclick="Game.setGameType('digits')">PIN Code (4 digits)</button>
+                <div class="mode-selector">
+                    <button class="mode-select-btn active" id="tab-classic" onclick="Game.setGameType('classic')">
+                        <span class="msb-name">Classic</span>
+                        <span class="msb-sub">0 – 100</span>
+                    </button>
+                    <span class="mode-sep">|</span>
+                    <button class="mode-select-btn" id="tab-digits" onclick="Game.setGameType('digits')">
+                        <span class="msb-name">PIN Code</span>
+                        <span class="msb-sub">4 digits</span>
+                    </button>
+                    <span class="mode-sep">|</span>
+                    <button class="mode-select-btn" id="tab-hotcold" onclick="Game.setGameType('hotcold')">
+                        <span class="msb-name">Hot &amp; Cold</span>
+                        <span class="msb-sub">no hints</span>
+                    </button>
                 </div>
 
                 <div class="intro-bottom">
@@ -61,19 +88,19 @@
             <section class="screen" id="setup-screen">
                 <button class="back-btn" onclick="Game.quitToMenu(false)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
                 <h2 class="setup-title">Multiplayer</h2>
-                
-                <div class="mode-tabs" style="margin-bottom: 20px; margin-top: 10px;">
+
+                <div class="mode-tabs">
                     <button class="tab-btn active" id="tab-create" onclick="Game.setMultiMode('create')">Create Room</button>
                     <button class="tab-btn" id="tab-join" onclick="Game.setMultiMode('join')">Join Room</button>
                 </div>
-                
+
                 <div class="setup-field">
                     <label>Your nickname</label>
                     <input type="text" class="game-input" id="player-name" placeholder="Nickname" maxlength="16" autocomplete="off">
                 </div>
-                
-                <div id="create-join-section" style="width: 100%; display: flex; flex-direction: column; align-items: center;">
-                    <div id="multi-create-section" style="width: 100%; display: flex; flex-direction: column; align-items: center;">
+
+                <div id="create-join-section">
+                    <div id="multi-create-section">
                         <div class="setup-field">
                             <label>Rounds</label>
                             <div class="round-selector" id="round-selector">
@@ -82,13 +109,13 @@
                                 <button class="round-pill" data-rounds="5" onclick="Game.setRounds(5)">5</button>
                             </div>
                         </div>
-                        <button class="pill-btn" id="setup-play-btn" style="max-width:280px;width:100%" disabled onclick="Game.hostPlay()">Create Room</button>
+                        <button class="pill-btn setup-action-btn" id="setup-play-btn" disabled onclick="Game.hostPlay()">Create Room</button>
                     </div>
-                    
-                    <div id="multi-join-section" class="hidden" style="width: 100%; display: flex; flex-direction: column; align-items: center;">
-                        <div class="join-row" style="margin-top: 10px;">
-                            <input type="text" class="game-input" id="guest-code" placeholder="ROOM CODE" maxlength="6" autocomplete="off" style="letter-spacing: 0.15em; flex: 1;">
-                            <button class="circle-btn" id="guest-play-btn" style="width: 52px; height: 52px;" disabled onclick="Game.guestPlay()">
+
+                    <div id="multi-join-section" class="hidden">
+                        <div class="join-row">
+                            <input type="text" class="game-input" id="guest-code" placeholder="Room code" maxlength="6" autocomplete="off">
+                            <button class="circle-btn" id="guest-play-btn" disabled onclick="Game.guestPlay()">
                                 <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
                             </button>
                         </div>
@@ -244,6 +271,8 @@
             <div class="modal-actions" id="modal-actions"></div>
         </div>
     </div>
+
+    <div class="app-version" id="app-version"></div>
 
     <script src="script.js"></script>
 </body>

@@ -1,5 +1,7 @@
 window.Game = (() => {
 
+  const VERSION = 'v2026.04.09 · bb527e7';
+
   const SUPABASE_URL = 'https://khrmochnfldrwynuwzrb.supabase.co';
   const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtocm1vY2huZmxkcnd5bnV3enJiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2NzIzNjEsImV4cCI6MjA5MTI0ODM2MX0.RmtX0P5KysCPgdHIke2CQqeJCv1OiI7uBjVgvtpPxuI';
 
@@ -125,6 +127,15 @@ window.Game = (() => {
   function rand(a,b) { return Math.floor(Math.random()*(b-a+1))+a; }
   function fmtTime(ms) { const s=Math.floor(ms/1000); return `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`; }
 
+  function getTemperature(diff) {
+    if (diff <= 3)  return { label:'Burning!',  cls:'burning',  emoji:'🔥', hint:'So close!' };
+    if (diff <= 8)  return { label:'Hot',        cls:'hot',      emoji:'♨️',  hint:'Getting warmer...' };
+    if (diff <= 15) return { label:'Warm',       cls:'warm',     emoji:'🌡️', hint:'Somewhat close' };
+    if (diff <= 25) return { label:'Lukewarm',   cls:'lukewarm', emoji:'😐', hint:'Barely anything' };
+    if (diff <= 40) return { label:'Cold',       cls:'cold',     emoji:'🧊', hint:'Far away' };
+    return           { label:'Freezing!',  cls:'freezing', emoji:'❄️', hint:'Very far away' };
+  }
+
   function burst(x,y,n,colors,cid='particles') {
     const c=$(cid);
     for(let i=0;i<n;i++){
@@ -156,10 +167,15 @@ window.Game = (() => {
     S.gameType = type;
     $('tab-classic').classList.toggle('active', type === 'classic');
     $('tab-digits').classList.toggle('active', type === 'digits');
-    $('logo-mode-text').textContent = type === 'classic' ? 'Number' : 'PIN';
-    $('intro-desc-text').innerHTML = type === 'classic' ? 
-        'Find the hidden number from 0 to 100.<br>Fewer attempts = higher score.' : 
-        'Guess the 4-digit PIN.<br>Green digits stay in place.';
+    $('tab-hotcold').classList.toggle('active', type === 'hotcold');
+    const logoText = { classic: 'Number', digits: 'PIN', hotcold: 'Temperature' }[type] || 'Number';
+    $('logo-mode-text').textContent = logoText;
+    const desc = {
+      classic:  'Find the hidden number from 0 to 100.<br>Fewer attempts = higher score.',
+      digits:   'Guess the 4-digit PIN.<br>Green digits stay in place.',
+      hotcold:  'Guess the number from 0 to 100.<br>Only temperature hints tell you how close you are.'
+    };
+    $('intro-desc-text').innerHTML = desc[type] || desc.classic;
     SFX.play('click');
   }
 
@@ -204,10 +220,11 @@ window.Game = (() => {
 
   function resetOppRange() {
     S.oppRangeLow = 0; S.oppRangeHigh = 100;
-    $('opp-range-low').textContent = S.gameType === 'digits' ? '' : '0';
-    $('opp-range-high').textContent = S.gameType === 'digits' ? '' : '100';
-    $('opp-arrow-l').textContent = S.gameType === 'digits' ? '' : 'low';
-    $('opp-arrow-h').textContent = S.gameType === 'digits' ? '' : 'high';
+    const hideBounds = S.gameType === 'digits' || S.gameType === 'hotcold';
+    $('opp-range-low').textContent = hideBounds ? '' : '0';
+    $('opp-range-high').textContent = hideBounds ? '' : '100';
+    $('opp-arrow-l').textContent = hideBounds ? '' : 'low';
+    $('opp-arrow-h').textContent = hideBounds ? '' : 'high';
     $('opp-range-current').textContent = '—';
     $('opp-range-current').className = 'opp-range-current';
     $('opp-range-hint').textContent = '';
@@ -331,6 +348,7 @@ window.Game = (() => {
 
   // ===== INIT =====
   function init() {
+    $('app-version').textContent = VERSION;
     initTheme();
     document.addEventListener('keydown', onKey);
     $('game-screen').addEventListener('click', ()=>{ if(!S.gameOver && (S.mode==='solo'||S.myTurn)) $('hidden-input').focus(); });
@@ -542,6 +560,7 @@ window.Game = (() => {
     S.oppFinished = false;
 
     document.body.classList.add('multi-active');
+    document.body.classList.toggle('hotcold-active', S.gameType === 'hotcold');
     $('opp-card-name').textContent = S.oppName;
     $('opp-card-att').textContent = '0';
     $('opp-card-chips').innerHTML = '';
@@ -557,19 +576,27 @@ window.Game = (() => {
 
   function handleOppGuess(d) {
     $('opp-card-att').textContent = d.attempt;
-    
+
     const chip = document.createElement('div');
     if (S.gameType === 'digits') {
-        updateOppRange(d.numberStr, false, d.correct); 
+        updateOppRange(d.numberStr, false, d.correct);
         chip.className = 'opp-chip digits ' + (d.correct ? 'correct' : '');
         chip.textContent = d.numberStr;
+    } else if (S.gameType === 'hotcold') {
+        const cls = d.correct ? 'correct' : (d.tempCls || '');
+        chip.className = 'opp-chip ' + cls;
+        chip.textContent = d.correct ? `${d.number} ✓` : `${d.number} · ${d.tempLabel || ''}`;
+        $('opp-range-current').textContent = d.number;
+        $('opp-range-current').className = 'opp-range-current' + (d.correct ? ' correct' : (d.tempCls ? ` ${d.tempCls}` : ''));
+        $('opp-range-hint').textContent = d.correct ? 'Found it!' : (d.tempLabel || '');
+        $('opp-range-hint').className = 'opp-range-hint' + (d.correct ? ' correct' : (d.tempCls ? ` ${d.tempCls}` : ''));
     } else {
         updateOppRange(d.number, d.isHigh, d.correct);
         const cls = d.correct ? 'correct' : (d.isHigh ? 'high' : 'low');
         chip.className = 'opp-chip ' + cls;
         chip.textContent = d.number;
     }
-    
+
     $('opp-card-chips').appendChild(chip);
     $('opp-card-chips').scrollTop = $('opp-card-chips').scrollHeight;
 
@@ -666,6 +693,12 @@ window.Game = (() => {
         $('bound-high-container').style.visibility = 'hidden';
         $('history-container').classList.remove('hidden');
         $('history-container').innerHTML = '';
+    } else if (S.gameType === 'hotcold') {
+        $('bound-low-container').style.visibility = 'hidden';
+        $('bound-high-container').style.visibility = 'hidden';
+        $('history-container').classList.add('hidden');
+        $('hc-list').innerHTML = '';
+        $('hc-att-num').textContent = '0';
     } else {
         $('bound-low-container').style.visibility = 'visible';
         $('bound-high-container').style.visibility = 'visible';
@@ -691,14 +724,15 @@ window.Game = (() => {
   function startSolo() {
     SFX.play('click'); S.mode='solo'; S.currentRound=0; S.rounds=1;
     S.roundResults=[]; S.oppRoundResults=[];
-    
+
     if (S.gameType === 'digits') {
         S.targetStr = String(rand(0, 9999)).padStart(4, '0');
     } else {
-        S.target = rand(0,100); 
+        S.target = rand(0,100);
     }
-    
+
     document.body.classList.remove('multi-active');
+    document.body.classList.toggle('hotcold-active', S.gameType === 'hotcold');
     resetGameUI(); resetRange(); show('game-screen'); startTimer();
   }
 
@@ -792,6 +826,55 @@ window.Game = (() => {
         return;
     }
 
+    // HOT & COLD MODE LOGIC
+    if (S.gameType === 'hotcold') {
+        const val = parseInt(S.typedValue, 10);
+        if (isNaN(val)||val<0||val>100) { shakeUI(); return; }
+
+        SFX.play('submit');
+        S.attempt++; S.typedValue='';
+        const an=$('att-num'); an.textContent=S.attempt; an.classList.remove('bump'); void an.offsetWidth; an.classList.add('bump');
+
+        const diff=Math.abs(val-S.target), fb=$('feedback-text'), sub=$('feedback-sub');
+        const temp = getTemperature(diff);
+        flashHeat(diff);
+
+        const isCorrect = val===S.target;
+
+        if (S.mode !== 'solo') {
+            sendData({ type:'GUESS', number:val, attempt:S.attempt, tempCls:temp.cls, tempLabel:temp.label, correct:isCorrect });
+        }
+
+        if (isCorrect) {
+            // Add winning entry to side panel
+            const winItem = document.createElement('div');
+            winItem.className = 'hc-item correct drop-anim';
+            winItem.innerHTML = `<span class="hc-item-num">${val}</span><span class="hc-item-badge correct">Found it!</span>`;
+            $('hc-list').prepend(winItem);
+            $('hc-att-num').textContent = S.attempt;
+            handleWin(val);
+        } else {
+            // Add to side history panel
+            const item = document.createElement('div');
+            item.className = 'hc-item drop-anim';
+            item.innerHTML = `<span class="hc-item-num">${val}</span><span class="hc-item-badge ${temp.cls}">${temp.label}</span>`;
+            $('hc-list').prepend(item);
+            $('hc-att-num').textContent = S.attempt;
+
+            fb.className = `feedback-text ${temp.cls} visible`;
+            fb.textContent = temp.label;
+            sub.textContent = temp.hint; sub.classList.add('visible');
+
+            SFX.play(diff <= 15 ? 'high' : 'low');
+            const bn=$('big-number'); bn.classList.remove('spring'); void bn.offsetWidth; bn.classList.add('spring'); setTimeout(()=>bn.classList.remove('spring'),500);
+            updateBigNum();
+
+            if (S.mode !== 'solo' && !S.oppFinished) { S.myTurn = false; updateTurnUI(); }
+            if (S.mode==='solo' || S.myTurn) $('hidden-input').focus();
+        }
+        return;
+    }
+
     // CLASSIC MODE LOGIC
     const val = parseInt(S.typedValue, 10);
     if (isNaN(val)||val<0||val>100) { shakeUI(); return; }
@@ -841,7 +924,7 @@ window.Game = (() => {
       fb.textContent='Correct!'; fb.className='feedback-text correct visible';
       sub.textContent='You found it!'; sub.classList.add('visible');
       
-      if(S.gameType === 'classic') {
+      if(S.gameType === 'classic' || S.gameType === 'hotcold') {
           $('big-number-text').textContent=val; $('big-number').classList.remove('placeholder');
           $('big-number').style.color='#51cf66'; $('big-number-hint').textContent='';
       } else {
