@@ -1,6 +1,6 @@
 window.Game = (() => {
 
-  const VERSION = 'v2026.04.09 · fc944c5';
+  const VERSION = 'v2026.04.09 · 957430b';
 
   const SUPABASE_URL = 'https://khrmochnfldrwynuwzrb.supabase.co';
   const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtocm1vY2huZmxkcnd5bnV3enJiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2NzIzNjEsImV4cCI6MjA5MTI0ODM2MX0.RmtX0P5KysCPgdHIke2CQqeJCv1OiI7uBjVgvtpPxuI';
@@ -366,7 +366,7 @@ window.Game = (() => {
     $('app-version').textContent = VERSION;
     initTheme();
     document.addEventListener('keydown', onKey);
-    $('game-screen').addEventListener('click', ()=>{ if(!S.gameOver && (S.mode==='solo'||S.myTurn)) $('hidden-input').focus(); });
+    $('game-screen').addEventListener('click', ()=>{ if(!S.gameOver && (S.mode==='solo'||S.myTurn||S.gameType==='hotcold')) $('hidden-input').focus(); });
     $('player-name').addEventListener('input', updateSetupButtons);
     $('guest-code').addEventListener('input', updateSetupButtons);
     
@@ -680,7 +680,7 @@ window.Game = (() => {
     const scr = document.querySelector('.screen.active');
     if (scr && scr.id === 'choose-screen' && e.key === 'Enter') { lockSecret(); return; }
     if (!scr || scr.id !== 'game-screen' || S.gameOver) return;
-    if (S.mode !== 'solo' && !S.myTurn) return;
+    if (S.mode !== 'solo' && !S.myTurn && S.gameType !== 'hotcold') return;
     if (S.mode !== 'solo' && S.iFinished) return;
 
     if (e.key >= '0' && e.key <= '9') { 
@@ -732,7 +732,7 @@ window.Game = (() => {
     } else {
         if (!S.typedValue) {
           txt.textContent='?'; el.classList.add('placeholder');
-          if(S.mode==='solo'||S.myTurn) { hint.textContent='type a number'; hint.style.opacity='1'; }
+          if(S.mode==='solo'||S.myTurn||S.gameType==='hotcold') { hint.textContent='type a number'; hint.style.opacity='1'; }
         } else {
           txt.textContent=S.typedValue; el.classList.remove('placeholder');
           hint.textContent='press enter'; hint.style.opacity='0.4';
@@ -742,7 +742,7 @@ window.Game = (() => {
   }
 
   function clearInput() {
-    if (S.mode !== 'solo' && !S.myTurn) return;
+    if (S.mode !== 'solo' && !S.myTurn && S.gameType !== 'hotcold') return;
     S.typedValue=''; SFX.play('delete'); updateBigNum();
   }
 
@@ -944,8 +944,8 @@ window.Game = (() => {
             const bn=$('big-number'); bn.classList.remove('spring'); void bn.offsetWidth; bn.classList.add('spring'); setTimeout(()=>bn.classList.remove('spring'),500);
             updateBigNum();
 
-            if (S.mode !== 'solo' && !S.oppFinished) { S.myTurn = false; updateTurnUI(); }
-            if (S.mode==='solo' || S.myTurn) $('hidden-input').focus();
+            // No turn switching in Hot & Cold — both players always active
+            $('hidden-input').focus();
         }
         return;
     }
