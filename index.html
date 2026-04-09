@@ -12,11 +12,11 @@
 <body>
     <div id="app-wrapper">
 
-        <!-- Hot & Cold history side panel (shown only in hotcold mode) -->
+        <!-- Player history side panel (hotcold solo + all multiplayer modes) -->
         <div id="hc-container" class="card-base">
             <div class="hc-inner">
                 <div class="hc-header-bar">
-                    <span class="hc-header-label">History</span>
+                    <span class="hc-header-label" id="hc-header-label">My guesses</span>
                     <div class="hc-att-wrap">
                         <span class="hc-att-num" id="hc-att-num">0</span>
                         <span class="hc-att-label">att</span>
@@ -191,6 +191,12 @@
                 </div>
 
                 <div class="history-container hidden" id="history-container"></div>
+
+                <!-- Countdown overlay for Hot & Cold simultaneous start -->
+                <div id="countdown-overlay" class="countdown-overlay hidden">
+                    <div class="countdown-num" id="countdown-num">5</div>
+                    <div class="countdown-label">Get ready!</div>
+                </div>
             </section>
 
             <section class="screen" id="wait-result-screen">

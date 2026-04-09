@@ -1,6 +1,6 @@
 window.Game = (() => {
 
-  const VERSION = 'v2026.04.09 · bb527e7';
+  const VERSION = 'v2026.04.09 · 0e9a66b';
 
   const SUPABASE_URL = 'https://khrmochnfldrwynuwzrb.supabase.co';
   const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtocm1vY2huZmxkcnd5bnV3enJiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2NzIzNjEsImV4cCI6MjA5MTI0ODM2MX0.RmtX0P5KysCPgdHIke2CQqeJCv1OiI7uBjVgvtpPxuI';
@@ -260,6 +260,20 @@ window.Game = (() => {
   function updateTurnUI() {
     if (S.mode === 'solo') return;
     const gc = $('game-container'), oc = $('opp-container');
+
+    // Hot & Cold multi: both players always active, no turn glow
+    if (S.gameType === 'hotcold') {
+      gc.classList.remove('my-turn-active', 'turn-pulse');
+      oc.classList.remove('opp-turn-active', 'opp-turn-pulse');
+      if (S.iFinished) {
+        $('main-display').style.opacity = '0.3';
+        $('submit-row').style.opacity = '0.3'; $('submit-row').style.pointerEvents = 'none';
+      } else {
+        $('main-display').style.opacity = '1';
+        $('submit-row').style.opacity = '1'; $('submit-row').style.pointerEvents = 'auto';
+      }
+      return;
+    }
 
     if (S.iFinished) {
       $('main-display').style.opacity = '0.3';
@@ -555,7 +569,8 @@ window.Game = (() => {
     resetRange();
     resetOppRange();
 
-    S.myTurn = (S.mode === 'host');
+    // Hot & Cold multi: both players always active simultaneously
+    S.myTurn = (S.mode === 'host') || (S.gameType === 'hotcold');
     S.iFinished = false;
     S.oppFinished = false;
 
@@ -565,13 +580,49 @@ window.Game = (() => {
     $('opp-card-att').textContent = '0';
     $('opp-card-chips').innerHTML = '';
 
+    // Set history panel header label per mode
+    const labels = { classic: 'My guesses', digits: 'My attempts', hotcold: 'My guesses' };
+    $('hc-header-label').textContent = labels[S.gameType] || 'My guesses';
+
     const rb = $('round-badge');
     if (S.rounds > 1) { rb.classList.remove('hidden'); rb.textContent = `Round ${S.currentRound}/${S.rounds}`; }
     else rb.classList.add('hidden');
 
-    updateTurnUI();
     show('game-screen');
-    startTimer();
+
+    if (S.gameType === 'hotcold') {
+      // 5-second countdown so both players start at the same time
+      updateTurnUI();
+      startCountdown(() => startTimer());
+    } else {
+      updateTurnUI();
+      startTimer();
+    }
+  }
+
+  function startCountdown(onDone) {
+    const overlay = $('countdown-overlay');
+    const numEl   = $('countdown-num');
+    let count = 5;
+    numEl.textContent = count;
+    overlay.classList.remove('hidden');
+    // Trigger CSS pulse animation on first number
+    numEl.classList.remove('count-enter'); void numEl.offsetWidth; numEl.classList.add('count-enter');
+    SFX.play('tick');
+
+    const iv = setInterval(() => {
+      count--;
+      if (count > 0) {
+        numEl.textContent = count;
+        numEl.classList.remove('count-enter'); void numEl.offsetWidth; numEl.classList.add('count-enter');
+        SFX.play('tick');
+      } else {
+        clearInterval(iv);
+        overlay.classList.add('hidden');
+        SFX.play('submit');
+        onDone();
+      }
+    }, 1000);
   }
 
   function handleOppGuess(d) {
@@ -602,9 +653,10 @@ window.Game = (() => {
 
     if (d.correct) {
       S.oppFinished = true;
-      if (!S.iFinished) { S.myTurn = true; updateTurnUI(); SFX.play('turn'); }
+      // Hot & Cold: no turn switch — both always play simultaneously
+      if (!S.iFinished && S.gameType !== 'hotcold') { S.myTurn = true; updateTurnUI(); SFX.play('turn'); }
     } else {
-      if (!S.iFinished) { S.myTurn = true; updateTurnUI(); SFX.play('turn'); }
+      if (!S.iFinished && S.gameType !== 'hotcold') { S.myTurn = true; updateTurnUI(); SFX.play('turn'); }
     }
   }
 
@@ -697,13 +749,14 @@ window.Game = (() => {
         $('bound-low-container').style.visibility = 'hidden';
         $('bound-high-container').style.visibility = 'hidden';
         $('history-container').classList.add('hidden');
-        $('hc-list').innerHTML = '';
-        $('hc-att-num').textContent = '0';
     } else {
         $('bound-low-container').style.visibility = 'visible';
         $('bound-high-container').style.visibility = 'visible';
         $('history-container').classList.add('hidden');
     }
+    // Always reset side history panel (used in hotcold solo + all multi modes)
+    $('hc-list').innerHTML = '';
+    $('hc-att-num').textContent = '0';
     
     $('main-display').style.opacity='1';
     $('submit-row').style.opacity='1'; $('submit-row').style.pointerEvents='auto';
@@ -762,7 +815,8 @@ window.Game = (() => {
   }
 
   function guess() {
-    if (S.mode !== 'solo' && !S.myTurn) return;
+    // Hot & Cold multi: no turns — both players always active
+    if (S.mode !== 'solo' && !S.myTurn && S.gameType !== 'hotcold') return;
     if (S.mode !== 'solo' && S.iFinished) return;
     if (S.gameOver && S.mode==='solo') return;
 
@@ -808,6 +862,17 @@ window.Game = (() => {
             sendData({ type:'GUESS', numberStr:maskedOppStr, attempt:S.attempt, correct:isCorrect });
         }
 
+        // Side history panel (multi only)
+        if (S.mode !== 'solo') {
+            const hItem = document.createElement('div');
+            hItem.className = 'hc-item pin-item drop-anim';
+            hItem.innerHTML = `<span class="hc-pin-row">${guessArr.map((c, i) =>
+                `<span class="${newKnown[i] !== null ? 'correct' : ''}">${c}</span>`
+            ).join('')}</span>`;
+            $('hc-list').prepend(hItem);
+            $('hc-att-num').textContent = S.attempt;
+        }
+
         if (isCorrect) {
             updateBigNum(); S.newlyLocked = null;
             handleWin(guessArr.join(''));
@@ -816,7 +881,7 @@ window.Game = (() => {
             hist.className = 'history-item drop-anim';
             hist.innerHTML = guessArr.map((c, i) => `<span class="${newKnown[i] !== null ? 'correct' : ''}">${c}</span>`).join('');
             $('history-container').prepend(hist);
-            
+
             SFX.play('low');
             updateBigNum(); S.newlyLocked = null;
 
@@ -891,6 +956,17 @@ window.Game = (() => {
 
     if (S.mode !== 'solo') {
       sendData({ type:'GUESS', number:val, attempt:S.attempt, isHigh, correct:isCorrect });
+    }
+
+    // Side history panel (multi only)
+    if (S.mode !== 'solo') {
+        const hItem = document.createElement('div');
+        const dirCls  = isCorrect ? 'correct' : (isHigh ? 'high' : 'low');
+        const dirText = isCorrect ? 'Found it!' : (isHigh ? '↑ Too high' : '↓ Too low');
+        hItem.className = `hc-item ${isCorrect ? 'correct' : ''} drop-anim`;
+        hItem.innerHTML = `<span class="hc-item-num">${val}</span><span class="hc-item-badge ${dirCls}">${dirText}</span>`;
+        $('hc-list').prepend(hItem);
+        $('hc-att-num').textContent = S.attempt;
     }
 
     if (isCorrect) {
