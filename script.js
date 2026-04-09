@@ -242,35 +242,33 @@ window.Game = (() => {
   // ===== TURN UI =====
   function updateTurnUI() {
     if (S.mode === 'solo') return;
-    const tb = $('turn-badge'), tt = $('turn-text'), ot = $('opp-turn-pill'), otxt = $('opp-turn-text');
-    tb.classList.remove('hidden');
-
-    const gc = $('game-container');
+    const gc = $('game-container'), oc = $('opp-container');
 
     if (S.iFinished) {
-      tb.className = 'turn-badge opp-turn'; tt.textContent = 'Finished';
       $('main-display').style.opacity = '0.3';
       $('submit-row').style.opacity = '0.3'; $('submit-row').style.pointerEvents = 'none';
       gc.classList.remove('my-turn-active', 'turn-pulse');
-      ot.className = 'opp-turn-pill ' + (S.oppFinished ? 'done' : 'their-turn');
-      otxt.textContent = S.oppFinished ? 'Finished' : 'Guessing...';
+      if (!S.oppFinished) {
+        oc.classList.add('opp-turn-active');
+      } else {
+        oc.classList.remove('opp-turn-active', 'opp-turn-pulse');
+      }
       return;
     }
 
     if (S.myTurn) {
-      tb.className = 'turn-badge my-turn'; tt.textContent = 'Your turn';
       $('main-display').style.opacity = '1';
       $('submit-row').style.opacity = '1'; $('submit-row').style.pointerEvents = 'auto';
-      ot.className = 'opp-turn-pill your-turn'; otxt.textContent = 'Waiting';
       gc.classList.remove('turn-pulse'); void gc.offsetWidth; gc.classList.add('turn-pulse');
       gc.classList.add('my-turn-active');
+      oc.classList.remove('opp-turn-active', 'opp-turn-pulse');
     } else {
-      tb.className = 'turn-badge opp-turn'; tt.textContent = "Opp's turn";
       $('main-display').style.opacity = '0.4';
       $('submit-row').style.opacity = '0.3'; $('submit-row').style.pointerEvents = 'none';
       S.typedValue = ''; updateBigNum();
-      ot.className = 'opp-turn-pill their-turn'; otxt.textContent = 'Guessing...';
-      gc.classList.remove('my-turn-active');
+      gc.classList.remove('my-turn-active', 'turn-pulse');
+      oc.classList.remove('opp-turn-pulse'); void oc.offsetWidth; oc.classList.add('opp-turn-pulse');
+      oc.classList.add('opp-turn-active');
     }
   }
 
@@ -665,8 +663,8 @@ window.Game = (() => {
     updateBigNum();
     $('feedback-text').textContent=''; $('feedback-text').className='feedback-text';
     $('feedback-sub').textContent=''; $('feedback-sub').classList.remove('visible');
-    $('turn-badge').classList.add('hidden');
     $('game-container').classList.remove('my-turn-active', 'turn-pulse');
+    $('opp-container').classList.remove('opp-turn-active', 'opp-turn-pulse');
     clearInterval(S.timerInterval);
   }
 
