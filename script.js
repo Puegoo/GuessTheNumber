@@ -1,6 +1,6 @@
 window.Game = (() => {
 
-  const VERSION = 'v2026.04.09 · 82408b1';
+  const VERSION = 'v2026.04.10 · 9496f40';
 
   const SUPABASE_URL = 'https://khrmochnfldrwynuwzrb.supabase.co';
   const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtocm1vY2huZmxkcnd5bnV3enJiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2NzIzNjEsImV4cCI6MjA5MTI0ODM2MX0.RmtX0P5KysCPgdHIke2CQqeJCv1OiI7uBjVgvtpPxuI';
@@ -76,6 +76,7 @@ window.Game = (() => {
     mySecret: 0, oppSecret: 0, iAmReady: false, oppReady: false,
     myFinalData: null, oppFinalData: null, choosingInterval: null,
     roundResults: [], oppRoundResults: [],
+    _pendingOppReadyRound: 0,
     
     // Turn-based & Rematch
     myTurn: false, iFinished: false, oppFinished: false,
@@ -340,8 +341,14 @@ window.Game = (() => {
       }
       else if (d.type==='INIT_ACK') { S.oppName=d.name; startChoosing(); }
       else if (d.type==='READY') {
-          if(S.gameType==='digits') S.oppSecretStr=d.secretStr; else S.oppSecret=d.secret;
-          S.oppReady=true; checkStartRound();
+          // In hotcold, READY can arrive before our own startChoosing resets oppReady —
+          // buffer it if it's for a future round to avoid losing the signal.
+          if (S.gameType === 'hotcold' && d.round !== undefined && d.round > S.currentRound) {
+              S._pendingOppReadyRound = d.round;
+          } else {
+              if(S.gameType==='digits') S.oppSecretStr=d.secretStr; else S.oppSecret=d.secret;
+              S.oppReady=true; checkStartRound();
+          }
       }
       else if (d.type==='START') {
           clearInterval(S.choosingInterval);
@@ -497,7 +504,12 @@ window.Game = (() => {
     // Hot & Cold multi: system picks a shared random target — skip choose screen entirely
     if (S.gameType === 'hotcold') {
       S.iAmReady = true;
-      sendData({ type: 'READY', secret: 0 }); // dummy value, target decided by host
+      // Restore early READY if it arrived before our startChoosing reset the flag
+      if (S._pendingOppReadyRound === S.currentRound) {
+        S.oppReady = true;
+        S._pendingOppReadyRound = 0;
+      }
+      sendData({ type: 'READY', secret: 0, round: S.currentRound }); // dummy value, target decided by host
       checkStartRound();
       return;
     }
@@ -1060,6 +1072,7 @@ window.Game = (() => {
 
     if (S.oppFinalData) {
       S.oppRoundResults.push(S.oppFinalData);
+      S.oppFinalData = null; // clear immediately — prevents double-processing if checkShowResult fires twice
       if (S.currentRound < S.rounds) {
         setTimeout(()=> startChoosing(), 1200);
       } else {
@@ -1154,6 +1167,7 @@ window.Game = (() => {
       S.oppRoundResults = [];
       S.iWantRematch = false;
       S.oppWantsRematch = false;
+      S._pendingOppReadyRound = 0;
       
       $('rematch-btn').disabled = false;
       startChoosing();
